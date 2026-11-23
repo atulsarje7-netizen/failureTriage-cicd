@@ -1,0 +1,24 @@
+# Repo-specific settings for the triage agent.
+# The agent must not import from app/ or tests/; everything local lives here.
+
+ci:
+  provider: github_actions
+
+paths:
+  product: [app/]
+  test: [tests/]
+  config: [triage.config.yaml, docker-compose.yml]
+  infra: [.github/]
+
+services:
+  app:
+    health_endpoint: /health
+
+thresholds:
+  abstain_below: 0.75
+  max_tool_calls: 12
+
+publish:
+  pr_comment: true
+  draft_issue: true
+  draft_issue_label: triage:draft
