@@ -8,8 +8,10 @@ This repo also contains a small demo application used as the first target. The a
 
 Skeleton only: Python package, Playwright Test project, config stub, and a GitHub Actions job with one passing Python check.
 
+Python 3.13 or newer. CI runs on 3.13.
+
 ```bash
-python3.13 -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 pytest
