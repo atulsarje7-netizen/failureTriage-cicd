@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import yaml
+
 from triage import __version__
 
 

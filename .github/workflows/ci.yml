@@ -6,9 +6,14 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   python:
     runs-on: ubuntu-latest
+    env:
+      APP_LOG_PATH: logs/app.log
     steps:
       - uses: actions/checkout@v4
 
@@ -22,10 +27,22 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Lint
-        run: ruff check triage tests/api
+        run: ruff check app triage tests/api
 
       - name: Type check
         run: mypy
 
       - name: Test
-        run: pytest -q
+        run: |
+          mkdir -p test-results/api logs
+          pytest -q --junitxml=test-results/api/junit.xml
+
+      - name: Upload API test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-artifacts
+          path: |
+            test-results/api/
+            logs/app.log
+          if-no-files-found: warn

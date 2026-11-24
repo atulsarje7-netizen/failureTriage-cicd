@@ -7,6 +7,8 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+app.db
+logs/*.log
 
 node_modules/
 playwright-report/
@@ -18,3 +20,6 @@ playwright/.cache/
 .env.*
 !.env.example
 .DS_Store
+
+# Local planning docs. Kept on this machine only.
+plans/
