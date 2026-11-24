@@ -1,0 +1,11 @@
+--- a/app/shop.py
++++ b/app/shop.py
+@@ -125,7 +125,7 @@
+             )
+         )
+         db.delete(cart_item)
+-    order.total_cents = total
++    order.total_cents = total * 2
+     db.flush()
+     db.refresh(order)
+     return order

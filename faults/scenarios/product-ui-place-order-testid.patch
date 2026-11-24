@@ -1,0 +1,11 @@
+--- a/app/web/templates/checkout.html
++++ b/app/web/templates/checkout.html
+@@ -6,7 +6,7 @@
+ <p data-testid="checkout-total">Pay ${{ '%.2f'|format(cart.total_cents / 100) }}</p>
+ <form data-testid="checkout-form" method="post" action="/checkout/place">
+   {% include "partials/csrf.html" %}
+-  <button type="submit" data-testid="place-order">Place order</button>
++  <button type="submit" data-testid="submit-order">Place order</button>
+ </form>
+ {% else %}
+ <p data-testid="checkout-empty">Nothing to check out.</p>

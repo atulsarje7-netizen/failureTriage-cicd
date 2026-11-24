@@ -1,0 +1,22 @@
+--- a/app/api/products.py
++++ b/app/api/products.py
+@@ -13,7 +13,7 @@
+ @router.get("", response_model=list[ProductOut])
+ def list_products(db: Session = Depends(get_db)) -> list[Product]:
+     """List catalog products."""
+-    return db.query(Product).order_by(Product.id).all()
++    return db.query(Product).filter(Product.sku != "WIDGET").order_by(Product.id).all()
+ 
+ 
+ @router.get("/{product_id}", response_model=ProductOut)
+--- a/app/web/pages.py
++++ b/app/web/pages.py
+@@ -126,7 +126,7 @@
+     user: User | None = Depends(optional_user),
+ ) -> Response:
+     """Show the product catalog."""
+-    products = db.query(Product).order_by(Product.id).all()
++    products = db.query(Product).filter(Product.sku != "WIDGET").order_by(Product.id).all()
+     return render(request, "catalog.html", user, db, products=products)
+ 
+ 

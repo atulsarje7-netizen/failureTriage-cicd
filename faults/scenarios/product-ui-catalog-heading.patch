@@ -1,0 +1,11 @@
+--- a/app/web/templates/catalog.html
++++ b/app/web/templates/catalog.html
+@@ -1,7 +1,7 @@
+ {% extends "base.html" %}
+ {% block title %}Catalog{% endblock %}
+ {% block content %}
+-<h1 data-testid="catalog-heading">Catalog</h1>
++<h1 data-testid="catalog-title">Catalog</h1>
+ <ul data-testid="product-list">
+   {% for product in products %}
+   <li data-testid="product-card" data-sku="{{ product.sku }}">

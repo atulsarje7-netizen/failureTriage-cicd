@@ -1,0 +1,11 @@
+--- a/tests/ui/specs/cart.spec.ts
++++ b/tests/ui/specs/cart.spec.ts
+@@ -18,7 +18,7 @@
+   await catalog.goto();
+   await catalog.addFirstProduct();
+   await cart.goto();
+-  await expect(page.getByTestId("cart-line")).toHaveCount(1);
++  await expect(page.getByTestId("cart-line")).toHaveCount(2);
+   await cart.removeFirst();
+   await expect(page.getByTestId("cart-empty")).toBeVisible();
+ });

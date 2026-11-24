@@ -45,7 +45,32 @@ Default users: `alice` / `password` and `bob` / `password`.
 HTML pages: `/login`, `/catalog`, `/basket`, `/checkout`, `/history`.  
 JSON API (unchanged paths): `/products`, `/cart`, `POST /checkout`, `/orders`.
 
-SQLite is created at `./app.db` when you run the app this way.
+SQLite is created at `./app.db` when you run the app this way. Checkout approves payment in process unless `PAYMENT_URL` points at the payment stub.
+
+## Docker Compose
+
+Postgres replaces SQLite when you run the stack. The payment stub is a second service.
+
+```bash
+docker compose --profile app up --build
+```
+
+The shop listens on port 8000, Postgres on 5432 (`shop` / `shop` / database `shop`), and the stub on 8001. CI starts Postgres and the stub, then runs `python -m app.seed --reset` before tests so leftover rows cannot look like a product bug.
+
+Local `pytest` still uses a temporary SQLite file. Set `USE_SHARED_DB=1` and `DATABASE_URL` to run those tests against Postgres.
+
+## Fault scenarios
+
+`faults/manifest.yaml` is the ground truth for injected failures: ten scenarios each for `product_bug`, `test_bug`, `flaky_test`, and `environment_issue`. A scenario is a patch and/or an environment, plus the tests that must fail and the tests that must still pass.
+
+```bash
+python -m faults list
+python -m faults execute product-checkout-500
+```
+
+Exit 0 means the failure matched the manifest. The command reverts the patch when it finishes. Outcome files land in `test-results/scenario/`.
+
+GitHub Actions workflow **Fault scenario** takes a scenario id. The run is red on purpose, including when the failure matched, so the run is a failed CI run with downloadable artifacts. `test-results/scenario/scenario.json` carries the expected label. `outcome.json` says whether it matched.
 
 ## Run API tests
 

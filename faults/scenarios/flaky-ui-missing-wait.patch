@@ -1,0 +1,19 @@
+--- a/tests/ui/specs/checkout.spec.ts
++++ b/tests/ui/specs/checkout.spec.ts
+@@ -19,3 +19,16 @@
+   await expect(page.getByTestId("order-placed")).toBeVisible();
+   await expect(page.getByTestId("order-row").first()).toBeVisible();
+ });
++
++test("late checkout banner", flow("checkout"), async ({ page }) => {
++  await page.goto("/login");
++  await page.evaluate(() => {
++    window.setTimeout(() => {
++      const node = document.createElement("p");
++      node.dataset.testid = "late-banner";
++      node.textContent = "ready";
++      document.body.appendChild(node);
++    }, 500);
++  });
++  await expect(page.getByTestId("late-banner")).toBeVisible({ timeout: 100 });
++});

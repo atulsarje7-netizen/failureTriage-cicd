@@ -1,0 +1,13 @@
+--- a/tests/ui/specs/login.spec.ts
++++ b/tests/ui/specs/login.spec.ts
+@@ -15,6 +15,10 @@
+ });
+ 
+ test("alice can log in and reach the catalog", flow("login"), async ({ page }) => {
++  const seed = Number(process.env.FLAKY_SEED ?? "0");
++  if (seed % 2 === 1) {
++    throw new Error("intermittent login failure");
++  }
+   const login = new LoginPage(page);
+   await login.goto();
+   await login.login("alice", "password");

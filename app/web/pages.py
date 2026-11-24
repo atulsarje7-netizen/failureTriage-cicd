@@ -94,6 +94,7 @@ def login_submit(
     if found is None or not verify_password(password, found.password_hash):
         return render(request, "login.html", None, status_code=401, error="Invalid credentials")
     token = create_session(db, found)
+    db.commit()
     response = RedirectResponse("/catalog", status_code=303)
     set_signed_cookie(response, request, COOKIE_NAME, token)
     csrf = csrf_token_for(request)
@@ -111,6 +112,7 @@ def logout(
     """Revoke the server session and clear cookies."""
     require_csrf(request, csrf_token)
     revoke_session(db, request.cookies.get(COOKIE_NAME))
+    db.commit()
     response = RedirectResponse("/login", status_code=303)
     response.delete_cookie(COOKIE_NAME, path="/")
     response.delete_cookie(CSRF_COOKIE, path="/")

@@ -1,0 +1,11 @@
+--- a/tests/api/test_cart.py
++++ b/tests/api/test_cart.py
+@@ -20,7 +20,7 @@
+     added = api_client.put("/cart/items", json={"product_id": 1, "quantity": 2})
+     assert added.status_code == 200
+     body = added.json()
+-    assert body["total_cents"] == 2598
++    assert body["total_cents"] == 1
+     assert body["items"][0]["quantity"] == 2
+ 
+     removed = api_client.delete("/cart/items/1")

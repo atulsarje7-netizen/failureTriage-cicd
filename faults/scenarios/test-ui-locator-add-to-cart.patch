@@ -1,0 +1,10 @@
+--- a/tests/ui/pages/catalog.page.ts
++++ b/tests/ui/pages/catalog.page.ts
+@@ -11,6 +11,6 @@
+ 
+   /** Add the first listed product to the cart via HTMX. */
+   async addFirstProduct() {
+-    await this.page.getByTestId("add-to-cart").first().click();
++    await this.page.getByTestId("add-product").first().click();
+   }
+ }

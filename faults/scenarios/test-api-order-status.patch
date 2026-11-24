@@ -1,0 +1,11 @@
+--- a/tests/api/test_orders.py
++++ b/tests/api/test_orders.py
+@@ -22,7 +22,7 @@
+     checkout = api_client.post("/checkout")
+     assert checkout.status_code == 201
+     order = checkout.json()
+-    assert order["status"] == "paid"
++    assert order["status"] == "shipped"
+     assert order["total_cents"] == 1299
+     assert order["items"][0]["sku"] == "WIDGET"
+ 

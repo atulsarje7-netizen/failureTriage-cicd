@@ -10,6 +10,7 @@ htmlcov/
 app.db
 playwright.db
 logs/*.log
+faults/.active.json
 
 node_modules/
 playwright-report/

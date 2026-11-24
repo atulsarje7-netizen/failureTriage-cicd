@@ -9,11 +9,16 @@ on:
 permissions:
   contents: read
 
+env:
+  DATABASE_URL: postgresql+psycopg://shop:shop@127.0.0.1:5432/shop?connect_timeout=5
+  USE_SHARED_DB: "1"
+  PAYMENT_URL: http://127.0.0.1:8001
+  PAYMENT_API_KEY: dev-token
+  APP_LOG_PATH: logs/app.log
+
 jobs:
   python:
     runs-on: ubuntu-latest
-    env:
-      APP_LOG_PATH: logs/app.log
     steps:
       - uses: actions/checkout@v4
 
@@ -27,15 +32,25 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Lint
-        run: ruff check app triage tests/api
+        run: ruff check app triage faults tests/api
 
       - name: Type check
         run: mypy
+
+      - name: Start Postgres and payment stub
+        run: docker compose -p failure-triage --profile db --profile pay up -d --wait --build
+
+      - name: Reset database
+        run: python -m app.seed --reset
 
       - name: Test
         run: |
           mkdir -p test-results/api logs
           pytest -q --junitxml=test-results/api/junit.xml
+
+      - name: Stop Compose services
+        if: always()
+        run: docker compose -p failure-triage --profile db --profile pay --profile app down -v
 
       - name: Upload API test artifacts
         if: always()
@@ -52,8 +67,6 @@ jobs:
     defaults:
       run:
         working-directory: tests/ui
-    env:
-      APP_LOG_PATH: logs/app.log
     steps:
       - uses: actions/checkout@v4
 
@@ -79,8 +92,21 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Start Postgres and payment stub
+        working-directory: .
+        run: docker compose -p failure-triage --profile db --profile pay up -d --wait --build
+
+      - name: Reset database
+        working-directory: .
+        run: python -m app.seed --reset
+
       - name: UI tests
         run: npx playwright test
+
+      - name: Stop Compose services
+        if: always()
+        working-directory: .
+        run: docker compose -p failure-triage --profile db --profile pay --profile app down -v
 
       - name: Upload UI test artifacts
         if: always()

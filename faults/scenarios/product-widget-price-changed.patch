@@ -1,0 +1,11 @@
+--- a/app/seed.py
++++ b/app/seed.py
+@@ -24,7 +24,7 @@
+         )
+         db.add_all(
+             [
+-                Product(sku="WIDGET", name="Widget", price_cents=1299, stock=20),
++                Product(sku="WIDGET", name="Widget", price_cents=1899, stock=20),
+                 Product(sku="GADGET", name="Gadget", price_cents=2499, stock=10),
+                 Product(sku="DOODAD", name="Doodad", price_cents=499, stock=50),
+             ]

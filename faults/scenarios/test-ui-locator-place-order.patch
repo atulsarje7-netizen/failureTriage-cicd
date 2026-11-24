@@ -1,0 +1,10 @@
+--- a/tests/ui/pages/checkout.page.ts
++++ b/tests/ui/pages/checkout.page.ts
+@@ -6,6 +6,6 @@
+ 
+   /** Submit the place-order form. */
+   async placeOrder() {
+-    await this.page.getByTestId("place-order").click();
++    await this.page.getByTestId("submit-order").click();
+   }
+ }

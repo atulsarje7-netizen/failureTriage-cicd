@@ -1,0 +1,23 @@
+--- a/tests/api/test_health.py
++++ b/tests/api/test_health.py
+@@ -17,3 +17,20 @@
+     assert body["payment"]["status"] == "ok"
+     assert response.headers["x-test-id"] == api_client.test_id
+     assert "x-request-id" in response.headers
++
++
++@pytest.mark.app
++def test_reads_flag_before_background_write() -> None:
++    """Fail when a delayed flag is read before the writer runs."""
++    import threading
++    import time
++
++    ready = {"ok": False}
++
++    def later() -> None:
++        time.sleep(0.3)
++        ready["ok"] = True
++
++    threading.Thread(target=later, daemon=True).start()
++    time.sleep(0.01)
++    assert ready["ok"], "race: read before ready"

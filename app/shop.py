@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import HTTPException, status
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
 from app.models import CartItem, Order, OrderItem, Product, User
+from app.payment import PaymentError, charge
 from app.schemas import CartItemOut, CartOut
+
+logger = logging.getLogger("app.shop")
 
 
 def cart_count(db: Session, user: User) -> int:
@@ -81,9 +86,7 @@ def place_order(db: Session, user: User) -> Order:
     if not cart_items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
     total = 0
-    order = Order(user_id=user.id, total_cents=0, status="paid")
-    db.add(order)
-    db.flush()
+    priced: list[tuple[CartItem, Product]] = []
     for cart_item in cart_items:
         product = db.get(Product, cart_item.product_id)
         if product is None:
@@ -92,6 +95,19 @@ def place_order(db: Session, user: User) -> Order:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Quantity must be at least 1"
             )
+        if product.stock < cart_item.quantity:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Not enough stock")
+        total += product.price_cents * cart_item.quantity
+        priced.append((cart_item, product))
+    try:
+        charge(total, reference=f"user-{user.id}")
+    except PaymentError as exc:
+        logger.warning("payment_failed %s", exc.detail)
+        raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    order = Order(user_id=user.id, total_cents=0, status="paid")
+    db.add(order)
+    db.flush()
+    for cart_item, product in priced:
         decremented = db.execute(
             update(Product)
             .where(Product.id == product.id, Product.stock >= cart_item.quantity)
@@ -100,8 +116,6 @@ def place_order(db: Session, user: User) -> Order:
         ).first()
         if decremented is None:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Not enough stock")
-        line = product.price_cents * cart_item.quantity
-        total += line
         db.add(
             OrderItem(
                 order_id=order.id,

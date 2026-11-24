@@ -1,0 +1,9 @@
+--- a/tests/ui/specs/login.spec.ts
++++ b/tests/ui/specs/login.spec.ts
+@@ -19,5 +19,5 @@
+   await login.goto();
+   await login.login("alice", "password");
+   await expect(page.getByTestId("catalog-heading")).toBeVisible();
+-  await expect(page.getByTestId("nav-user")).toHaveText("alice");
++  await expect(page.getByTestId("nav-user")).toHaveText("carol");
+ });

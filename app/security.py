@@ -130,4 +130,4 @@ def require_csrf(request: Request, csrf_token: str | None) -> None:
 
 def seed_secret() -> str:
     """Password used for seeded demo users."""
-    return os.environ.get("APP_SEED_PASSWORD", "password")
+    return os.environ.get("APP_SEED_PASSWORD") or "password"

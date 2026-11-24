@@ -1,0 +1,22 @@
+--- a/tests/api/test_auth.py
++++ b/tests/api/test_auth.py
+@@ -1,5 +1,8 @@
+ from __future__ import annotations
+ 
++import os
++import random
++
+ import pytest
+ 
+ from tests.api.conftest import RecordingClient
+--- a/tests/api/test_auth.py
++++ b/tests/api/test_auth.py
+@@ -10,6 +10,8 @@
+ 
+ def test_login_success(api_client: RecordingClient) -> None:
+     """Alice can log in and receive a token."""
++    if random.Random(int(os.environ.get("FLAKY_SEED", "0"))).random() < 0.5:
++        raise AssertionError("intermittent login failure")
+     response = api_client.post("/auth/login", json={"username": "alice", "password": "password"})
+     assert response.status_code == 200
+     body = response.json()

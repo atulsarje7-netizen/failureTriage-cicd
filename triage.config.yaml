@@ -13,6 +13,10 @@ paths:
 services:
   app:
     health_endpoint: /health
+  payment:
+    health_endpoint: /health
+  database:
+    engine: postgres
 
 thresholds:
   abstain_below: 0.75

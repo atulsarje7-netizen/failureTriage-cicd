@@ -1,0 +1,10 @@
+--- a/tests/ui/specs/login.spec.ts
++++ b/tests/ui/specs/login.spec.ts
+@@ -18,6 +18,6 @@
+   const login = new LoginPage(page);
+   await login.goto();
+   await login.login("alice", "password");
+-  await expect(page.getByTestId("catalog-heading")).toBeVisible();
++  await expect(page.getByTestId("catalog-title")).toBeVisible();
+   await expect(page.getByTestId("nav-user")).toHaveText("alice");
+ });

@@ -1,0 +1,22 @@
+--- a/tests/api/test_products.py
++++ b/tests/api/test_products.py
+@@ -1,5 +1,8 @@
+ from __future__ import annotations
+ 
++import os
++import random
++
+ import pytest
+ 
+ from tests.api.conftest import RecordingClient
+--- a/tests/api/test_products.py
++++ b/tests/api/test_products.py
+@@ -9,6 +9,8 @@
+ 
+ def test_list_products(api_client: RecordingClient) -> None:
+     """Catalog lists the three seeded products."""
++    if random.Random(int(os.environ.get("FLAKY_SEED", "0"))).random() < 0.5:
++        raise AssertionError("intermittent catalog failure")
+     response = api_client.get("/products")
+     assert response.status_code == 200
+     products = response.json()

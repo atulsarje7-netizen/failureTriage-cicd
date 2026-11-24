@@ -1,0 +1,993 @@
+# Ground truth for injected failures. Each entry is one CI scenario.
+# Run one with: python -m faults execute <id>
+version: 1
+scenarios:
+- id: product-checkout-500
+  label: product_bug
+  tags:
+  - api
+  - ui
+  - cross-layer
+  - http-5xx
+  flow_id: checkout
+  stage: test
+  summary: A non-empty checkout raises HTTP 500, so the API and UI checkout tests both fail.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_empty_cart
+    - tests/api/test_products.py::test_list_products
+    - tests/api/test_auth.py::test_login_success
+    ui_failed:
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  patch: scenarios/product-checkout-500.patch
+- id: product-login-rejects-password
+  label: product_bug
+  tags:
+  - api
+  - ui
+  - cross-layer
+  - auth
+  - http-4xx
+  flow_id: login
+  stage: test
+  summary: The real demo password is rejected, so API and UI login both fail while a wrong password still
+    returns 401.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_auth.py::test_login_success
+    api_passed:
+    - tests/api/test_auth.py::test_login_rejects_bad_password
+    - tests/api/test_auth.py::test_me_requires_auth
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - alice can log in and reach the catalog
+    ui_passed:
+    - wrong password shows an error
+    - guest can open login
+    - catalog lists seeded products
+  patch: scenarios/product-login-rejects-password.patch
+- id: product-catalog-hides-widget
+  label: product_bug
+  tags:
+  - api
+  - ui
+  - cross-layer
+  - assertion-mismatch
+  flow_id: catalog
+  stage: test
+  summary: The catalog listing drops the widget, so the API list and the UI card count both fail.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_products.py::test_list_products
+    api_passed:
+    - tests/api/test_products.py::test_get_product
+    - tests/api/test_auth.py::test_login_success
+    ui_failed:
+    - catalog lists seeded products
+    ui_passed:
+    - alice can log in and reach the catalog
+    - guest can open login
+  patch: scenarios/product-catalog-hides-widget.patch
+- id: product-cart-forces-quantity-one
+  label: product_bug
+  tags:
+  - api
+  - assertion-mismatch
+  flow_id: cart
+  stage: test
+  summary: Cart updates store quantity 1. The API quantity assertion fails and the UI, which adds one,
+    still passes.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_cart.py::test_add_and_remove_cart_item
+    api_passed:
+    - tests/api/test_cart.py::test_cart_requires_auth
+    - tests/api/test_cart.py::test_cart_rejects_quantity_below_one
+    - tests/api/test_products.py::test_list_products
+    ui_passed:
+    - add to cart updates the badge
+    - remove item leaves an empty cart
+    - catalog lists seeded products
+  patch: scenarios/product-cart-forces-quantity-one.patch
+- id: product-order-total-doubled
+  label: product_bug
+  tags:
+  - api
+  - assertion-mismatch
+  flow_id: checkout
+  stage: test
+  summary: The stored order total is doubled. The API total assertion fails and the UI, which only checks
+    that an order appeared, passes.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_empty_cart
+    - tests/api/test_products.py::test_list_products
+    ui_passed:
+    - checkout places an order visible in history
+    - catalog lists seeded products
+  patch: scenarios/product-order-total-doubled.patch
+- id: product-widget-price-changed
+  label: product_bug
+  tags:
+  - api
+  - assertion-mismatch
+  flow_id: checkout
+  stage: test
+  summary: The seeded widget price changes, so the API checkout total fails while the UI never asserts
+    the price.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_products.py::test_list_products
+    - tests/api/test_products.py::test_get_product
+    ui_passed:
+    - checkout places an order visible in history
+    - catalog lists seeded products
+  patch: scenarios/product-widget-price-changed.patch
+- id: product-ui-place-order-testid
+  label: product_bug
+  tags:
+  - ui
+  - selector-not-found
+  flow_id: checkout
+  stage: test
+  summary: The checkout button test id changes in the page. API checkout still passes and the UI cannot
+    find the control.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    - tests/api/test_orders.py::test_checkout_empty_cart
+    ui_failed:
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  patch: scenarios/product-ui-place-order-testid.patch
+- id: product-ui-catalog-heading
+  label: product_bug
+  tags:
+  - ui
+  - selector-not-found
+  flow_id: login
+  stage: test
+  summary: The catalog heading test id changes in the template. Login still works through the API and
+    the UI cannot see the heading.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_auth.py::test_login_success
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - alice can log in and reach the catalog
+    ui_passed:
+    - catalog lists seeded products
+    - guest can open login
+  patch: scenarios/product-ui-catalog-heading.patch
+- id: product-ui-cart-badge
+  label: product_bug
+  tags:
+  - ui
+  - selector-not-found
+  flow_id: catalog
+  stage: test
+  summary: The cart badge test id changes. The API cart still updates and the UI badge assertion cannot
+    find it.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_cart.py::test_add_and_remove_cart_item
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - add to cart updates the badge
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  patch: scenarios/product-ui-cart-badge.patch
+- id: product-order-missing-500
+  label: product_bug
+  tags:
+  - api
+  - http-5xx
+  flow_id: checkout
+  stage: test
+  summary: A missing order returns 500 instead of 404. The API not-found test fails and the UI never requests
+    that id.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_order_not_found
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    - tests/api/test_products.py::test_list_products
+    ui_passed:
+    - checkout places an order visible in history
+    - catalog lists seeded products
+  patch: scenarios/product-order-missing-500.patch
+- id: test-api-checkout-wrong-total
+  label: test_bug
+  tags:
+  - api
+  - assertion-mismatch
+  flow_id: checkout
+  stage: test
+  summary: The API checkout test expects the wrong total. Only that assertion changes.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_empty_cart
+    - tests/api/test_products.py::test_list_products
+    ui_passed:
+    - checkout places an order visible in history
+    - catalog lists seeded products
+  patch: scenarios/test-api-checkout-wrong-total.patch
+- id: test-api-login-wrong-user
+  label: test_bug
+  tags:
+  - api
+  - assertion-mismatch
+  - test-data
+  flow_id: login
+  stage: test
+  summary: The API login test expects a username that was never seeded.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_auth.py::test_login_success
+    api_passed:
+    - tests/api/test_auth.py::test_login_rejects_bad_password
+    - tests/api/test_products.py::test_list_products
+    ui_passed:
+    - alice can log in and reach the catalog
+    - catalog lists seeded products
+  patch: scenarios/test-api-login-wrong-user.patch
+- id: test-api-catalog-count
+  label: test_bug
+  tags:
+  - api
+  - assertion-mismatch
+  - test-data
+  flow_id: catalog
+  stage: test
+  summary: The API catalog test expects four products. The catalog still has three.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_products.py::test_list_products
+    api_passed:
+    - tests/api/test_products.py::test_get_product
+    - tests/api/test_auth.py::test_login_success
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  patch: scenarios/test-api-catalog-count.patch
+- id: test-api-cart-wrong-total
+  label: test_bug
+  tags:
+  - api
+  - assertion-mismatch
+  flow_id: cart
+  stage: test
+  summary: The API cart test expects the wrong line total. The cart API itself is unchanged.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_cart.py::test_add_and_remove_cart_item
+    api_passed:
+    - tests/api/test_cart.py::test_cart_requires_auth
+    - tests/api/test_products.py::test_list_products
+    ui_passed:
+    - remove item leaves an empty cart
+    - add to cart updates the badge
+  patch: scenarios/test-api-cart-wrong-total.patch
+- id: test-api-order-status
+  label: test_bug
+  tags:
+  - api
+  - assertion-mismatch
+  flow_id: checkout
+  stage: test
+  summary: The API checkout test expects status shipped. The order is still paid.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_empty_cart
+    - tests/api/test_auth.py::test_login_success
+    ui_passed:
+    - checkout places an order visible in history
+    - alice can log in and reach the catalog
+  patch: scenarios/test-api-order-status.patch
+- id: test-ui-locator-place-order
+  label: test_bug
+  tags:
+  - ui
+  - selector-not-found
+  flow_id: checkout
+  stage: test
+  summary: The Playwright checkout page object looks for a test id the page does not have. The API checkout
+    still passes.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  patch: scenarios/test-ui-locator-place-order.patch
+- id: test-ui-locator-catalog-heading
+  label: test_bug
+  tags:
+  - ui
+  - selector-not-found
+  flow_id: login
+  stage: test
+  summary: The login UI test looks for a catalog heading test id that was never on the page.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_auth.py::test_login_success
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - alice can log in and reach the catalog
+    ui_passed:
+    - catalog lists seeded products
+    - guest can open login
+    - wrong password shows an error
+  patch: scenarios/test-ui-locator-catalog-heading.patch
+- id: test-ui-locator-add-to-cart
+  label: test_bug
+  tags:
+  - ui
+  - selector-not-found
+  flow_id: catalog
+  stage: test
+  summary: The catalog page object clicks a test id the button does not have, so every UI flow that adds
+    a product fails.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_cart.py::test_add_and_remove_cart_item
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - add to cart updates the badge
+    - remove item leaves an empty cart
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+    - guest can open login
+  patch: scenarios/test-ui-locator-add-to-cart.patch
+- id: test-ui-stale-username
+  label: test_bug
+  tags:
+  - ui
+  - assertion-mismatch
+  - test-data
+  flow_id: login
+  stage: test
+  summary: The UI login test expects the nav to show carol after alice signs in.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_auth.py::test_login_success
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - alice can log in and reach the catalog
+    ui_passed:
+    - catalog lists seeded products
+    - wrong password shows an error
+    - guest can open login
+  patch: scenarios/test-ui-stale-username.patch
+- id: test-ui-cart-line-count
+  label: test_bug
+  tags:
+  - ui
+  - assertion-mismatch
+  - test-data
+  flow_id: cart
+  stage: test
+  summary: The UI cart test expects two lines after adding a single product.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_cart.py::test_add_and_remove_cart_item
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - remove item leaves an empty cart
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  patch: scenarios/test-ui-cart-line-count.patch
+- id: flaky-api-catalog-probability
+  label: flaky_test
+  tags:
+  - api
+  - race-condition
+  flow_id: catalog
+  stage: test
+  summary: The catalog API test fails for FLAKY_SEED 1 and passes for FLAKY_SEED 2. This run uses the
+    failing seed.
+  services: []
+  run:
+    api: full
+    ui: skip
+  expect:
+    api_failed:
+    - tests/api/test_products.py::test_list_products
+    api_passed:
+    - tests/api/test_products.py::test_get_product
+    - tests/api/test_auth.py::test_login_success
+  env:
+    FLAKY_SEED: '1'
+  passes_with_env:
+    FLAKY_SEED: '2'
+  patch: scenarios/flaky-api-catalog-probability.patch
+- id: flaky-api-login-probability
+  label: flaky_test
+  tags:
+  - api
+  - race-condition
+  flow_id: login
+  stage: test
+  summary: The login API test fails for FLAKY_SEED 1 and passes for FLAKY_SEED 2. This run uses the failing
+    seed.
+  services: []
+  run:
+    api: full
+    ui: skip
+  expect:
+    api_failed:
+    - tests/api/test_auth.py::test_login_success
+    api_passed:
+    - tests/api/test_auth.py::test_login_rejects_bad_password
+    - tests/api/test_products.py::test_list_products
+  env:
+    FLAKY_SEED: '1'
+  passes_with_env:
+    FLAKY_SEED: '2'
+  patch: scenarios/flaky-api-login-probability.patch
+- id: flaky-api-cart-probability
+  label: flaky_test
+  tags:
+  - api
+  - race-condition
+  flow_id: cart
+  stage: test
+  summary: The cart API test fails for FLAKY_SEED 1 and passes for FLAKY_SEED 2. This run uses the failing
+    seed.
+  services: []
+  run:
+    api: full
+    ui: skip
+  expect:
+    api_failed:
+    - tests/api/test_cart.py::test_add_and_remove_cart_item
+    api_passed:
+    - tests/api/test_cart.py::test_cart_requires_auth
+    - tests/api/test_products.py::test_list_products
+  env:
+    FLAKY_SEED: '1'
+  passes_with_env:
+    FLAKY_SEED: '2'
+  patch: scenarios/flaky-api-cart-probability.patch
+- id: flaky-api-checkout-probability
+  label: flaky_test
+  tags:
+  - api
+  - race-condition
+  flow_id: checkout
+  stage: test
+  summary: The checkout API test fails for FLAKY_SEED 1 and passes for FLAKY_SEED 2. This run uses the
+    failing seed.
+  services: []
+  run:
+    api: full
+    ui: skip
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_empty_cart
+    - tests/api/test_products.py::test_list_products
+  env:
+    FLAKY_SEED: '1'
+  passes_with_env:
+    FLAKY_SEED: '2'
+  patch: scenarios/flaky-api-checkout-probability.patch
+- id: flaky-ui-login-probability
+  label: flaky_test
+  tags:
+  - ui
+  - race-condition
+  flow_id: login
+  stage: test
+  summary: The UI login test throws when FLAKY_SEED is odd and passes when it is even. This run uses seed
+    1.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_auth.py::test_login_success
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - alice can log in and reach the catalog
+    ui_passed:
+    - guest can open login
+    - catalog lists seeded products
+  env:
+    FLAKY_SEED: '1'
+  passes_with_env:
+    FLAKY_SEED: '2'
+  patch: scenarios/flaky-ui-login-probability.patch
+- id: flaky-ui-checkout-probability
+  label: flaky_test
+  tags:
+  - ui
+  - race-condition
+  flow_id: checkout
+  stage: test
+  summary: The UI checkout test throws when FLAKY_SEED is odd and passes when it is even. This run uses
+    seed 1.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  env:
+    FLAKY_SEED: '1'
+  passes_with_env:
+    FLAKY_SEED: '2'
+  patch: scenarios/flaky-ui-checkout-probability.patch
+- id: flaky-api-order-dependent
+  label: flaky_test
+  tags:
+  - api
+  - order-dependent
+  flow_id: catalog
+  stage: test
+  summary: The reader test fails unless the writer test in the same file ran first. This run invokes only
+    the reader.
+  services: []
+  run:
+    api:
+    - tests/api/test_products.py::test_catalog_order_flag_reader
+    ui: skip
+  expect:
+    api_failed:
+    - tests/api/test_products.py::test_catalog_order_flag_reader
+  patch: scenarios/flaky-api-order-dependent.patch
+- id: flaky-ui-order-dependent
+  label: flaky_test
+  tags:
+  - ui
+  - order-dependent
+  flow_id: orders
+  stage: test
+  summary: The UI reader fails unless the writer spec ran first. This run greps only the reader.
+  services: []
+  run:
+    api: skip
+    ui: reads order flag
+  expect:
+    ui_failed:
+    - reads order flag
+  patch: scenarios/flaky-ui-order-dependent.patch
+- id: flaky-ui-missing-wait
+  label: flaky_test
+  tags:
+  - ui
+  - timeout
+  - race-condition
+  flow_id: checkout
+  stage: test
+  summary: A banner appears after 500ms and the test waits only 100ms. A longer timeout would pass.
+  services: []
+  run:
+    api: full
+    ui: full
+  expect:
+    api_passed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    - tests/api/test_products.py::test_list_products
+    ui_failed:
+    - late checkout banner
+    ui_passed:
+    - checkout places an order visible in history
+    - catalog lists seeded products
+  patch: scenarios/flaky-ui-missing-wait.patch
+- id: flaky-api-timing
+  label: flaky_test
+  tags:
+  - api
+  - timeout
+  - race-condition
+  flow_id: health
+  stage: test
+  summary: The test reads a flag 10ms after a thread that writes it at 300ms. Waiting longer would pass.
+  services: []
+  run:
+    api: full
+    ui: skip
+  expect:
+    api_failed:
+    - tests/api/test_health.py::test_reads_flag_before_background_write
+    api_passed:
+    - tests/api/test_health.py::test_health_reports_database_and_payment
+    - tests/api/test_products.py::test_list_products
+  patch: scenarios/flaky-api-timing.patch
+- id: env-database-down
+  label: environment_issue
+  tags:
+  - api
+  - service-unavailable
+  - network
+  flow_id: health
+  stage: test
+  summary: Postgres is not started. Every shop API test errors on connect, and the UI server is not started.
+  services: []
+  run:
+    api: full
+    ui: skip
+  expect: {}
+  env:
+    USE_SHARED_DB: '1'
+    DATABASE_URL: postgresql+psycopg://shop:shop@127.0.0.1:5432/shop?connect_timeout=3
+  whole_run: true
+- id: env-database-auth
+  label: environment_issue
+  tags:
+  - api
+  - config
+  - auth
+  flow_id: health
+  stage: test
+  summary: Postgres is up with a password the app does not have. Every shop API test errors.
+  services:
+  - db
+  run:
+    api: full
+    ui: skip
+  expect: {}
+  env:
+    USE_SHARED_DB: '1'
+    DATABASE_URL: postgresql+psycopg://shop:wrong-password@127.0.0.1:5432/shop?connect_timeout=3
+  whole_run: true
+- id: env-database-missing
+  label: environment_issue
+  tags:
+  - api
+  - config
+  flow_id: health
+  stage: test
+  summary: The database name in DATABASE_URL does not exist. Every shop API test errors.
+  services:
+  - db
+  run:
+    api: full
+    ui: skip
+  expect: {}
+  env:
+    USE_SHARED_DB: '1'
+    DATABASE_URL: postgresql+psycopg://shop:shop@127.0.0.1:5432/missing_db?connect_timeout=3
+  whole_run: true
+- id: env-payment-down
+  label: environment_issue
+  tags:
+  - api
+  - ui
+  - cross-layer
+  - service-unavailable
+  - network
+  - http-5xx
+  flow_id: checkout
+  stage: test
+  summary: The payment stub is not running. Health and checkout fail. Catalog and login still pass.
+  services:
+  - db
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_health.py::test_health_reports_database_and_payment
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_products.py::test_list_products
+    - tests/api/test_auth.py::test_login_success
+    ui_failed:
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  env:
+    USE_SHARED_DB: '1'
+    DATABASE_URL: postgresql+psycopg://shop:shop@127.0.0.1:5432/shop?connect_timeout=3
+    PAYMENT_URL: http://127.0.0.1:8001
+    PAYMENT_API_KEY: dev-token
+    PAYMENT_STUB_TOKEN: ''
+- id: env-payment-slow
+  label: environment_issue
+  tags:
+  - api
+  - ui
+  - cross-layer
+  - timeout
+  - service-unavailable
+  flow_id: checkout
+  stage: test
+  summary: The payment stub sleeps past the client timeout. Checkout fails and health, which does not
+    charge, stays ok.
+  services:
+  - db
+  - pay
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_health.py::test_health_reports_database_and_payment
+    - tests/api/test_products.py::test_list_products
+    - tests/api/test_auth.py::test_login_success
+    ui_failed:
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  env:
+    USE_SHARED_DB: '1'
+    DATABASE_URL: postgresql+psycopg://shop:shop@127.0.0.1:5432/shop?connect_timeout=3
+    PAYMENT_URL: http://127.0.0.1:8001
+    PAYMENT_API_KEY: dev-token
+    PAYMENT_STUB_TOKEN: dev-token
+    PAYMENT_STUB_DELAY_MS: '5000'
+    PAYMENT_TIMEOUT_S: '1'
+- id: env-payment-5xx
+  label: environment_issue
+  tags:
+  - api
+  - ui
+  - cross-layer
+  - http-5xx
+  - service-unavailable
+  flow_id: checkout
+  stage: test
+  summary: The payment stub returns 500 on charge. Checkout fails with a bad gateway and the rest of the
+    shop stays up.
+  services:
+  - db
+  - pay
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_health.py::test_health_reports_database_and_payment
+    - tests/api/test_products.py::test_list_products
+    - tests/api/test_auth.py::test_login_success
+    ui_failed:
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  env:
+    USE_SHARED_DB: '1'
+    DATABASE_URL: postgresql+psycopg://shop:shop@127.0.0.1:5432/shop?connect_timeout=3
+    PAYMENT_URL: http://127.0.0.1:8001
+    PAYMENT_API_KEY: dev-token
+    PAYMENT_STUB_TOKEN: dev-token
+    PAYMENT_STUB_MODE: error
+- id: env-payment-unauthorized
+  label: environment_issue
+  tags:
+  - api
+  - ui
+  - cross-layer
+  - auth
+  - config
+  flow_id: checkout
+  stage: test
+  summary: PAYMENT_API_KEY does not match the stub token. Checkout is rejected and login still works.
+  services:
+  - db
+  - pay
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_health.py::test_health_reports_database_and_payment
+    - tests/api/test_products.py::test_list_products
+    - tests/api/test_auth.py::test_login_success
+    ui_failed:
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  env:
+    USE_SHARED_DB: '1'
+    DATABASE_URL: postgresql+psycopg://shop:shop@127.0.0.1:5432/shop?connect_timeout=3
+    PAYMENT_URL: http://127.0.0.1:8001
+    PAYMENT_API_KEY: wrong-key
+    PAYMENT_STUB_TOKEN: dev-token
+- id: env-bad-seed-secret
+  label: environment_issue
+  tags:
+  - api
+  - ui
+  - cross-layer
+  - config
+  - auth
+  flow_id: login
+  stage: test
+  summary: APP_SEED_PASSWORD does not match the password the tests send. Login fails and the public catalog
+    still loads.
+  services:
+  - db
+  - pay
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_auth.py::test_login_success
+    api_passed:
+    - tests/api/test_products.py::test_list_products
+    - tests/api/test_health.py::test_health_reports_database_and_payment
+    - tests/api/test_auth.py::test_login_rejects_bad_password
+    - tests/api/test_auth.py::test_me_requires_auth
+    ui_failed:
+    - alice can log in and reach the catalog
+    ui_passed:
+    - catalog lists seeded products
+    - guest can open login
+    - wrong password shows an error
+  env:
+    USE_SHARED_DB: '1'
+    DATABASE_URL: postgresql+psycopg://shop:shop@127.0.0.1:5432/shop?connect_timeout=3
+    PAYMENT_URL: http://127.0.0.1:8001
+    PAYMENT_API_KEY: dev-token
+    PAYMENT_STUB_TOKEN: dev-token
+    APP_SEED_PASSWORD: not-the-real-password
+- id: env-payment-dns
+  label: environment_issue
+  tags:
+  - api
+  - ui
+  - cross-layer
+  - network
+  flow_id: checkout
+  stage: test
+  summary: PAYMENT_URL points at a host that does not resolve. Health and checkout fail. The catalog does
+    not call payment.
+  services:
+  - db
+  run:
+    api: full
+    ui: full
+  expect:
+    api_failed:
+    - tests/api/test_health.py::test_health_reports_database_and_payment
+    - tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart
+    api_passed:
+    - tests/api/test_products.py::test_list_products
+    - tests/api/test_auth.py::test_login_success
+    ui_failed:
+    - checkout places an order visible in history
+    ui_passed:
+    - catalog lists seeded products
+    - alice can log in and reach the catalog
+  env:
+    USE_SHARED_DB: '1'
+    DATABASE_URL: postgresql+psycopg://shop:shop@127.0.0.1:5432/shop?connect_timeout=3
+    PAYMENT_URL: http://payment.invalid:9
+    PAYMENT_API_KEY: dev-token
+- id: env-dependency-install
+  label: environment_issue
+  tags:
+  - dependency-install
+  flow_id: pipeline
+  stage: install
+  summary: pip is asked for a package that does not exist, so the install step fails before tests run.
+  services: []
+  run:
+    api: skip
+    ui: skip
+  expect: {}

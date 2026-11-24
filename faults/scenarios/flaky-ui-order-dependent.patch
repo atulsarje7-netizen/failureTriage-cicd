@@ -1,0 +1,18 @@
+--- /dev/null
++++ b/tests/ui/specs/order-flag.spec.ts
+@@ -0,0 +1,15 @@
++import fs from "node:fs";
++
++import { expect, flow, test } from "../fixtures";
++
++const flag = "test-results/order-flag";
++
++test("writes order flag", flow("orders"), async () => {
++  fs.mkdirSync("test-results", { recursive: true });
++  fs.writeFileSync(flag, "ok");
++  expect(fs.existsSync(flag)).toBe(true);
++});
++
++test("reads order flag", flow("orders"), async () => {
++  expect(fs.existsSync(flag), "order-dependent: predecessor did not run").toBe(true);
++});

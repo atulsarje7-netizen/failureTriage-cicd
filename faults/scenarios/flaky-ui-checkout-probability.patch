@@ -1,0 +1,13 @@
+--- a/tests/ui/specs/checkout.spec.ts
++++ b/tests/ui/specs/checkout.spec.ts
+@@ -5,6 +5,10 @@
+ import { LoginPage } from "../pages/login.page";
+ 
+ test("checkout places an order visible in history", flow("checkout"), async ({ page }) => {
++  const seed = Number(process.env.FLAKY_SEED ?? "0");
++  if (seed % 2 === 1) {
++    throw new Error("intermittent checkout failure");
++  }
+   const login = new LoginPage(page);
+   await login.goto();
+   await login.login("alice", "password");

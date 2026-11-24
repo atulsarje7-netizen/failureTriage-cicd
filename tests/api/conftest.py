@@ -11,6 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.seed import reset_database
 from tests.api.exchange import HttpExchange, exchange_dir, safe_nodeid, write_exchange
 
 
@@ -68,20 +69,31 @@ class RecordingClient:
         return self.request("DELETE", url, **kwargs)
 
 
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Mark shop tests so a fault run can ignore catalog unit tests."""
+    for item in items:
+        if "api_client" in item.fixturenames:
+            item.add_marker(pytest.mark.app)
+
+
 @pytest.fixture
 def api_client(
     request: pytest.FixtureRequest,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[RecordingClient]:
-    """App client with a temp SQLite DB and X-Test-Id set to the test node id."""
+    """App client on a temp SQLite file, or a reseeded shared DB when USE_SHARED_DB=1."""
     test_id = request.node.nodeid
-    db_path = tmp_path / "shop.db"
     log_path = Path(os.environ.get("APP_LOG_PATH", str(tmp_path / "app.log")))
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
+    shared = os.environ.get("USE_SHARED_DB") == "1"
+    if not shared:
+        db_path = tmp_path / "shop.db"
+        monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
     monkeypatch.setenv("APP_LOG_PATH", str(log_path))
     app = create_app()
     with TestClient(app, headers={"X-Test-Id": test_id}) as raw:
+        if shared:
+            reset_database(app.state.SessionLocal)
         yield RecordingClient(raw, test_id)
 
 

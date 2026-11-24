@@ -1,0 +1,16 @@
+.git
+.venv
+.mypy_cache
+.pytest_cache
+.ruff_cache
+**/__pycache__
+**/*.pyc
+node_modules
+tests/ui/node_modules
+tests/ui/test-results
+tests/ui/playwright-report
+logs
+*.db
+plans
+.cursor
+faults/.active.json

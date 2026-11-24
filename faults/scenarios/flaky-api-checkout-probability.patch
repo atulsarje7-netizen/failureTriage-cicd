@@ -1,0 +1,22 @@
+--- a/tests/api/test_orders.py
++++ b/tests/api/test_orders.py
+@@ -1,5 +1,8 @@
+ from __future__ import annotations
+ 
++import os
++import random
++
+ import pytest
+ 
+ from tests.api.conftest import RecordingClient
+--- a/tests/api/test_orders.py
++++ b/tests/api/test_orders.py
+@@ -17,6 +17,8 @@
+ 
+ def test_checkout_creates_order_and_clears_cart(api_client: RecordingClient) -> None:
+     """Checkout pays the cart, empties it, and lists the new order."""
++    if random.Random(int(os.environ.get("FLAKY_SEED", "0"))).random() < 0.5:
++        raise AssertionError("intermittent checkout failure")
+     login(api_client)
+     api_client.put("/cart/items", json={"product_id": 1, "quantity": 1})
+     checkout = api_client.post("/checkout")

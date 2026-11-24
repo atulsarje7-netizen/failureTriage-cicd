@@ -1,0 +1,11 @@
+--- a/tests/api/test_products.py
++++ b/tests/api/test_products.py
+@@ -12,7 +12,7 @@
+     response = api_client.get("/products")
+     assert response.status_code == 200
+     products = response.json()
+-    assert len(products) == 3
++    assert len(products) == 4
+     assert {item["sku"] for item in products} == {"WIDGET", "GADGET", "DOODAD"}
+ 
+ 
