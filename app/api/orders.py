@@ -4,14 +4,16 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import CartItem, Order, OrderItem, Product, User
+from app.models import Order, Product, User
 from app.schemas import OrderItemOut, OrderOut
 from app.security import current_user
+from app.shop import place_order
 
 router = APIRouter(tags=["orders"])
 
 
 def _order_out(db: Session, order: Order) -> OrderOut:
+    """Serialize an order and its line items."""
     items: list[OrderItemOut] = []
     for item in order.items:
         product = db.get(Product, item.product_id)
@@ -35,35 +37,8 @@ def _order_out(db: Session, order: Order) -> OrderOut:
 
 @router.post("/checkout", response_model=OrderOut, status_code=status.HTTP_201_CREATED)
 def checkout(user: User = Depends(current_user), db: Session = Depends(get_db)) -> OrderOut:
-    cart_items = db.query(CartItem).filter(CartItem.user_id == user.id).all()
-    if not cart_items:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
-    total = 0
-    order = Order(user_id=user.id, total_cents=0, status="paid")
-    db.add(order)
-    db.flush()
-    for cart_item in cart_items:
-        product = db.get(Product, cart_item.product_id)
-        if product is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
-        if cart_item.quantity > product.stock:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Not enough stock")
-        product.stock -= cart_item.quantity
-        line = product.price_cents * cart_item.quantity
-        total += line
-        db.add(
-            OrderItem(
-                order_id=order.id,
-                product_id=product.id,
-                quantity=cart_item.quantity,
-                price_cents=product.price_cents,
-            )
-        )
-        db.delete(cart_item)
-    order.total_cents = total
-    db.flush()
-    db.refresh(order)
-    return _order_out(db, order)
+    """Pay the cart, decrement stock, and return the new order."""
+    return _order_out(db, place_order(db, user))
 
 
 @router.get("/orders", response_model=list[OrderOut])
@@ -71,6 +46,7 @@ def list_orders(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> list[OrderOut]:
+    """List the current user's orders, newest first."""
     orders = db.query(Order).filter(Order.user_id == user.id).order_by(Order.id.desc()).all()
     return [_order_out(db, order) for order in orders]
 
@@ -81,6 +57,7 @@ def get_order(
     user: User = Depends(current_user),
     db: Session = Depends(get_db),
 ) -> OrderOut:
+    """Return one of the current user's orders or 404."""
     order = db.get(Order, order_id)
     if order is None or order.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")

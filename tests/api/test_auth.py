@@ -9,6 +9,7 @@ pytestmark = pytest.mark.flow("login")
 
 
 def test_login_success(api_client: RecordingClient) -> None:
+    """Alice can log in and receive a token."""
     response = api_client.post("/auth/login", json={"username": "alice", "password": "password"})
     assert response.status_code == 200
     body = response.json()
@@ -17,17 +18,29 @@ def test_login_success(api_client: RecordingClient) -> None:
 
 
 def test_login_rejects_bad_password(api_client: RecordingClient) -> None:
+    """Wrong password returns 401."""
     response = api_client.post("/auth/login", json={"username": "alice", "password": "wrong"})
     assert response.status_code == 401
 
 
 def test_me_requires_auth(api_client: RecordingClient) -> None:
+    """/auth/me without a token returns 401."""
     response = api_client.get("/auth/me")
     assert response.status_code == 401
 
 
 def test_me_returns_current_user(api_client: RecordingClient) -> None:
+    """/auth/me returns the logged-in username."""
     login(api_client)
     response = api_client.get("/auth/me")
     assert response.status_code == 200
     assert response.json()["username"] == "alice"
+
+
+def test_logout_revokes_bearer_token(api_client: RecordingClient) -> None:
+    """POST /auth/logout invalidates the session token."""
+    login(api_client)
+    revoked = api_client.post("/auth/logout")
+    assert revoked.status_code == 204
+    me = api_client.get("/auth/me")
+    assert me.status_code == 401

@@ -13,7 +13,10 @@ test_id_var: ContextVar[str | None] = ContextVar("test_id", default=None)
 
 
 class JsonFormatter(logging.Formatter):
+    """Emit one JSON object per log line, including request_id and test_id."""
+
     def format(self, record: logging.LogRecord) -> str:
+        """Serialize a log record to a JSON line."""
         payload: dict[str, Any] = {
             "ts": datetime.now(UTC).isoformat(),
             "level": record.levelname,
@@ -28,6 +31,7 @@ class JsonFormatter(logging.Formatter):
 
 
 def configure_logging() -> None:
+    """Send INFO logs to APP_LOG_PATH or stdout as JSON."""
     handler: logging.Handler
     log_path = os.environ.get("APP_LOG_PATH")
     if log_path:

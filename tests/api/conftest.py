@@ -15,15 +15,20 @@ from tests.api.exchange import HttpExchange, exchange_dir, safe_nodeid, write_ex
 
 
 class RecordingClient:
+    """httpx-style client that stores the last request/response for failure capture."""
+
     def __init__(self, client: TestClient, test_id: str) -> None:
+        """Wrap a TestClient and tag calls with this test's node id."""
         self._client = client
         self.test_id = test_id
         self.last: HttpExchange | None = None
 
     def authenticate(self, token: str) -> None:
+        """Send later requests with this Bearer token."""
         self._client.headers["Authorization"] = f"Bearer {token}"
 
     def request(self, method: str, url: str, **kwargs: Any) -> httpx.Response:
+        """Send an HTTP request and remember the exchange."""
         body = kwargs.get("json", kwargs.get("content"))
         headers = {**dict(self._client.headers), **kwargs.get("headers", {})}
         started = time.perf_counter()
@@ -47,15 +52,19 @@ class RecordingClient:
         return response
 
     def get(self, url: str, **kwargs: Any) -> httpx.Response:
+        """GET wrapper around request()."""
         return self.request("GET", url, **kwargs)
 
     def post(self, url: str, **kwargs: Any) -> httpx.Response:
+        """POST wrapper around request()."""
         return self.request("POST", url, **kwargs)
 
     def put(self, url: str, **kwargs: Any) -> httpx.Response:
+        """PUT wrapper around request()."""
         return self.request("PUT", url, **kwargs)
 
     def delete(self, url: str, **kwargs: Any) -> httpx.Response:
+        """DELETE wrapper around request()."""
         return self.request("DELETE", url, **kwargs)
 
 
@@ -65,6 +74,7 @@ def api_client(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> Iterator[RecordingClient]:
+    """App client with a temp SQLite DB and X-Test-Id set to the test node id."""
     test_id = request.node.nodeid
     db_path = tmp_path / "shop.db"
     log_path = Path(os.environ.get("APP_LOG_PATH", str(tmp_path / "app.log")))
@@ -77,6 +87,7 @@ def api_client(
 
 @pytest.hookimpl(hookwrapper=True)
 def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) -> Iterator[None]:
+    """On a failed test, write the last HTTP exchange to disk."""
     outcome = yield
     report = outcome.get_result()
     if report.when != "call" or not report.failed:

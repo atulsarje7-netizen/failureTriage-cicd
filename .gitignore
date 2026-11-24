@@ -8,6 +8,7 @@ __pycache__/
 .coverage
 htmlcov/
 app.db
+playwright.db
 logs/*.log
 
 node_modules/

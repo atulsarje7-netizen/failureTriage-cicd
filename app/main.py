@@ -5,19 +5,23 @@ import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request, Response
+from fastapi.staticfiles import StaticFiles
 
 from app.api import auth, cart, health, orders, products
 from app.db import Base, make_engine, make_session_factory
 from app.logging import configure_logging, request_id_var, test_id_var
 from app.seed import seed_if_empty
+from app.web import pages as web_pages
 
 logger = logging.getLogger("app")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Create tables, seed data, and dispose the engine when the app stops."""
     engine = make_engine()
     session_factory = make_session_factory(engine)
     Base.metadata.create_all(engine)
@@ -29,6 +33,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
+    """Build the shop API, HTML pages, and request-id logging middleware."""
     configure_logging()
     app = FastAPI(title="Shop", version="0.1.0", lifespan=lifespan)
     app.include_router(health.router)
@@ -36,12 +41,19 @@ def create_app() -> FastAPI:
     app.include_router(products.router)
     app.include_router(cart.router)
     app.include_router(orders.router)
+    app.include_router(web_pages.router)
+    app.mount(
+        "/static",
+        StaticFiles(directory=str(Path(__file__).resolve().parent / "web" / "static")),
+        name="static",
+    )
 
     @app.middleware("http")
     async def request_context(
         request: Request,
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
+        """Attach request/test ids, log the call, and echo ids on the response."""
         request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
         test_id = request.headers.get("x-test-id")
         req_token = request_id_var.set(request_id)

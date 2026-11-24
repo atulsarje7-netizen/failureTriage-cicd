@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Orders{% endblock %}
+{% block content %}
+<h1 data-testid="orders-heading">Orders</h1>
+{% if placed %}
+<p data-testid="order-placed">Order {{ placed }} placed.</p>
+{% endif %}
+{% if orders %}
+<ul data-testid="order-list">
+  {% for order in orders %}
+  <li data-testid="order-row" data-order-id="{{ order.id }}">
+    <span data-testid="order-id">{{ order.id }}</span>
+    <span data-testid="order-status">{{ order.status }}</span>
+    <span data-testid="order-total">${{ '%.2f'|format(order.total_cents / 100) }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p data-testid="orders-empty">No orders yet.</p>
+{% endif %}
+{% endblock %}

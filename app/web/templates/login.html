@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<h1 data-testid="login-heading">Log in</h1>
+{% if error %}
+<p data-testid="login-error">{{ error }}</p>
+{% endif %}
+<form data-testid="login-form" method="post" action="/login">
+  {% include "partials/csrf.html" %}
+  <label>Username
+    <input data-testid="username" name="username" autocomplete="username" required>
+  </label>
+  <label>Password
+    <input data-testid="password" name="password" type="password" autocomplete="current-password" required>
+  </label>
+  <button type="submit" data-testid="login-submit">Log in</button>
+</form>
+{% endblock %}

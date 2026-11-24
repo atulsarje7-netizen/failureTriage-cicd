@@ -9,11 +9,13 @@ pytestmark = pytest.mark.flow("cart")
 
 
 def test_cart_requires_auth(api_client: RecordingClient) -> None:
+    """Cart endpoints require a Bearer token."""
     response = api_client.get("/cart")
     assert response.status_code == 401
 
 
 def test_add_and_remove_cart_item(api_client: RecordingClient) -> None:
+    """Add a line then remove it leaves an empty cart."""
     login(api_client)
     added = api_client.put("/cart/items", json={"product_id": 1, "quantity": 2})
     assert added.status_code == 200
@@ -25,3 +27,10 @@ def test_add_and_remove_cart_item(api_client: RecordingClient) -> None:
     assert removed.status_code == 200
     assert removed.json()["items"] == []
     assert removed.json()["total_cents"] == 0
+
+
+def test_cart_rejects_quantity_below_one(api_client: RecordingClient) -> None:
+    """API cart updates require quantity >= 1."""
+    login(api_client)
+    response = api_client.put("/cart/items", json={"product_id": 1, "quantity": 0})
+    assert response.status_code == 422

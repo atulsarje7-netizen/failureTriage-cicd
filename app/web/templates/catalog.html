@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Catalog{% endblock %}
+{% block content %}
+<h1 data-testid="catalog-heading">Catalog</h1>
+<ul data-testid="product-list">
+  {% for product in products %}
+  <li data-testid="product-card" data-sku="{{ product.sku }}">
+    <span data-testid="product-name">{{ product.name }}</span>
+    <span data-testid="product-price">${{ '%.2f'|format(product.price_cents / 100) }}</span>
+    <form
+      hx-post="/basket/items"
+      hx-target="#cart-badge"
+      hx-swap="outerHTML"
+      method="post"
+      action="/basket/items"
+    >
+      {% include "partials/csrf.html" %}
+      <input type="hidden" name="product_id" value="{{ product.id }}">
+      <input type="hidden" name="quantity" value="1">
+      <button type="submit" data-testid="add-to-cart">Add to cart</button>
+    </form>
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}

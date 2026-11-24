@@ -1,0 +1,26 @@
+<div id="cart-body" data-testid="cart-body">
+  {% if cart.items %}
+  <ul data-testid="cart-lines">
+    {% for item in cart.items %}
+    <li data-testid="cart-line" data-sku="{{ item.sku }}">
+      <span data-testid="cart-line-name">{{ item.name }}</span>
+      <span data-testid="cart-line-qty">{{ item.quantity }}</span>
+      <form
+        hx-post="/basket/items/{{ item.product_id }}/delete"
+        hx-target="#cart-body"
+        hx-swap="outerHTML"
+        method="post"
+        action="/basket/items/{{ item.product_id }}/delete"
+      >
+        {% include "partials/csrf.html" %}
+        <button type="submit" data-testid="remove-from-cart">Remove</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  <p data-testid="cart-total">Total ${{ '%.2f'|format(cart.total_cents / 100) }}</p>
+  <a data-testid="go-checkout" href="/checkout">Checkout</a>
+  {% else %}
+  <p data-testid="cart-empty">Your cart is empty.</p>
+  {% endif %}
+</div>

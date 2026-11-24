@@ -8,6 +8,7 @@ pytestmark = pytest.mark.flow("health")
 
 
 def test_health_reports_database_and_payment(api_client: RecordingClient) -> None:
+    """Health is ok and echoes X-Test-Id and X-Request-Id."""
     response = api_client.get("/health")
     assert response.status_code == 200
     body = response.json()

@@ -12,6 +12,7 @@ router = APIRouter(tags=["health"])
 
 @router.get("/health", response_model=HealthOut)
 def health(db: Session = Depends(get_db)) -> HealthOut:
+    """Report database connectivity and in-process payment stub status."""
     db_status = "ok"
     try:
         db.execute(text("SELECT 1"))

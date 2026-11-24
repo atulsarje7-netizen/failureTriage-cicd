@@ -9,6 +9,8 @@ from app.db import Base
 
 
 class User(Base):
+    """Shop account used for login, cart, and orders."""
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -21,6 +23,8 @@ class User(Base):
 
 
 class Product(Base):
+    """Catalog item with price in cents and stock count."""
+
     __tablename__ = "products"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -31,6 +35,8 @@ class Product(Base):
 
 
 class AuthSession(Base):
+    """Bearer token issued at login."""
+
     __tablename__ = "sessions"
 
     token: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -43,6 +49,8 @@ class AuthSession(Base):
 
 
 class CartItem(Base):
+    """One product line in a user's cart."""
+
     __tablename__ = "cart_items"
     __table_args__ = (UniqueConstraint("user_id", "product_id"),)
 
@@ -56,6 +64,8 @@ class CartItem(Base):
 
 
 class Order(Base):
+    """Paid checkout of a cart."""
+
     __tablename__ = "orders"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -71,6 +81,8 @@ class Order(Base):
 
 
 class OrderItem(Base):
+    """Snapshot of a product line on an order."""
+
     __tablename__ = "order_items"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

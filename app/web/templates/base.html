@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Shop{% endblock %}</title>
+  <link rel="stylesheet" href="/static/shop.css">
+</head>
+<body>
+  <header class="nav">
+    <a data-testid="nav-home" href="/catalog">Shop</a>
+    <nav>
+      <a data-testid="nav-catalog" href="/catalog">Catalog</a>
+      <a data-testid="nav-cart" href="/basket">Cart {% include "partials/cart_badge.html" %}</a>
+      {% if user %}
+      <a data-testid="nav-orders" href="/history">Orders</a>
+      <span data-testid="nav-user">{{ user.username }}</span>
+      <form method="post" action="/logout">
+        {% include "partials/csrf.html" %}
+        <button type="submit" data-testid="logout">Log out</button>
+      </form>
+      {% else %}
+      <a data-testid="nav-login" href="/login">Log in</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/htmx.min.js"></script>
+</body>
+</html>

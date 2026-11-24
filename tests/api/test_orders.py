@@ -9,12 +9,14 @@ pytestmark = pytest.mark.flow("checkout")
 
 
 def test_checkout_empty_cart(api_client: RecordingClient) -> None:
+    """Checkout with no items returns 400."""
     login(api_client)
     response = api_client.post("/checkout")
     assert response.status_code == 400
 
 
 def test_checkout_creates_order_and_clears_cart(api_client: RecordingClient) -> None:
+    """Checkout pays the cart, empties it, and lists the new order."""
     login(api_client)
     api_client.put("/cart/items", json={"product_id": 1, "quantity": 1})
     checkout = api_client.post("/checkout")
@@ -37,6 +39,7 @@ def test_checkout_creates_order_and_clears_cart(api_client: RecordingClient) -> 
 
 
 def test_order_not_found(api_client: RecordingClient) -> None:
+    """Unknown order id returns 404."""
     login(api_client)
     response = api_client.get("/orders/999")
     assert response.status_code == 404

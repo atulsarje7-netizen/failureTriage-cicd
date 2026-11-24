@@ -1,1 +1,1 @@
-"""HTTP routers for the demo shop."""
+"""HTTP routers for the demo shop API."""

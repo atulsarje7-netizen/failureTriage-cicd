@@ -7,6 +7,7 @@ from app.security import hash_password, seed_secret
 
 
 def seed_if_empty(session_factory: sessionmaker[Session]) -> None:
+    """Insert demo users and products when the database has none."""
     db = session_factory()
     try:
         if db.query(User).first() is not None:

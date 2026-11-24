@@ -13,17 +13,15 @@ python -m pip install -e ".[dev]"
 pytest
 ```
 
-## Iteration 1
-
-FastAPI shop API with SQLite: login, products, cart, checkout, orders, and `/health`. API tests send `X-Test-Id`, write JSON app logs, and record the last HTTP exchange when a test fails.
-
 ```bash
 uvicorn app.main:create_app --factory --reload
 ```
 
 Default users: `alice` / `password` and `bob` / `password`.
 
-To produce failure artifacts locally (JUnit XML, app log, captured request/response):
+HTML pages: `/login`, `/catalog`, `/basket`, `/checkout`, `/history`. JSON API paths are unchanged (`/products`, `/cart`, `/checkout`, `/orders`).
+
+## API tests
 
 ```bash
 mkdir -p test-results/api logs
@@ -32,9 +30,19 @@ APP_LOG_PATH=logs/app.log DEMO_FAIL=1 pytest -q --junitxml=test-results/api/juni
 
 Look under `test-results/api/junit.xml`, `logs/app.log`, and `test-results/api/exchanges/`.
 
-UI tests (TypeScript Playwright) live in `tests/ui/` and are not run in CI yet.
+## UI tests
 
 ```bash
 cd tests/ui
 npm install
+npx playwright install chromium
+npx playwright test
+```
+
+To produce a Playwright JSON report and `trace.zip`:
+
+```bash
+cd tests/ui
+DEMO_FAIL=1 npx playwright test
+npx playwright show-trace test-results/**/trace.zip
 ```

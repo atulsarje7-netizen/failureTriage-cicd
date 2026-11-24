@@ -1,0 +1,13 @@
+---
+description: One-line docstrings on classes and methods
+alwaysApply: true
+---
+
+# One-line class and method docs
+
+Every new or edited class, method, and function gets a single-line docstring that says what it does, not how.
+
+- Put it on the class or `def`/`async def`, not on every statement.
+- Skip only trivial one-line getters/setters that already say the same thing as the name.
+- Do not write multi-paragraph docs unless the contract is non-obvious (errors, side effects, invariants).
+- Apply the same habit in Python and in TypeScript (JSDoc one-liner on classes and exported functions).
