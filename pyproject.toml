@@ -1,6 +1,6 @@
 [project]
 name = "failure-triage"
-version = "0.4.0"
+version = "0.5.0"
 description = "CI failure triage agent for API and UI tests"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -50,7 +50,7 @@ filterwarnings = [
 [tool.ruff]
 target-version = "py313"
 line-length = 100
-src = ["app", "triage", "faults", "tests/api"]
+src = ["app", "triage", "faults", "tests/api", "tests/triage"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]

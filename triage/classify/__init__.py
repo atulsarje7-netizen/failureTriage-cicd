@@ -1,1 +1,1 @@
-"""Rules and LLM classification."""
+"""Rules-only classification of evidence bundles."""

@@ -93,6 +93,25 @@ The bundle includes normalised API (JUnit) and UI (Playwright JSON) results with
 
 Collector unit tests use saved fixtures under `tests/triage/fixtures/`.
 
+## Rule-based triage
+
+`triage run --bundle` labels a saved bundle without a model. A whole-run outage (every executed test failed with the same connection or authentication error, or install failed before tests ran) becomes one `environment_issue`. Other failures are grouped by a normalised signature (exception type and first project frame, with line numbers and ids removed) inside each `flow_id`.
+
+The rules then apply the UI-versus-API matrix:
+
+- API and UI both fail on a flow: `product_bug` with `cross-layer`, unless the diff only changes tests.
+- UI fails and the API on that flow passes: `test_bug` for a missing selector, unless the diff only changes `app/web`, which is `product_bug`. A locator that resolved with the wrong text is an assertion, so a product diff makes it `product_bug`. A UI failure that saw HTTP 5xx while the API passed abstains. When login is an environment auth failure and the diff changes no product or test code, later UI failures are the same `environment_issue`.
+- API fails and the UI passes, or the UI did not run: `product_bug` when the diff changes product code, `test_bug` when it only changes tests.
+- A test that failed and then passed in the same run is `flaky_test`. A failure that has never passed is not labelled `flaky_test`; intermittent, order-dependent, and short-timeout failures abstain as `needs_human`.
+
+```bash
+triage run --bundle bundles/local-evidence_bundle.json --out bundles/verdicts.json
+triage smoke --execute --out bundles/smoke
+triage smoke --bundles bundles/smoke --out bundles/smoke
+```
+
+`triage smoke` prints the scenarios whose label missed `faults/manifest.yaml`. Abstains are listed separately from mismatches. The command exits 0 when every scenario received a verdict or an abstain. Saved bundles, verdicts, and the run trace land under `bundles/smoke/<scenario-id>/`. The bundle field `changes` is the classed diff (`product`, `product_ui`, `test`, `config`, `infra`, `dependency`).
+
 ## Run API tests
 
 From the repo root, with the venv activated:

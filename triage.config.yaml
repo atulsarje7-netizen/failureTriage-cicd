@@ -7,9 +7,14 @@ ci:
 
 paths:
   product: [app/]
+  product_ui: [app/web/]
   test: [tests/]
   config: [triage.config.yaml, docker-compose.yml]
   infra: [.github/]
+  dependency:
+    - pyproject.toml
+    - tests/ui/package.json
+    - tests/ui/package-lock.json
 
 artifacts:
   api_junit: test-results/api/junit.xml
@@ -18,6 +23,7 @@ artifacts:
   ui_results_dir: tests/ui/test-results
   app_log: logs/app.log
   scenario_json: test-results/scenario/scenario.json
+  scenario_diff: test-results/scenario/scenario.diff
 
 # Fallback when a report omits flow_id (JUnit without properties, older artifacts).
 flow_path_rules:

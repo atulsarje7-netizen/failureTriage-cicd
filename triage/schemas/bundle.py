@@ -8,6 +8,15 @@ from pydantic import BaseModel, Field
 
 SCHEMA_VERSION = "1"
 
+FileKind = Literal[
+    "product",
+    "product_ui",
+    "test",
+    "config",
+    "infra",
+    "dependency",
+    "other",
+]
 TestStatus = Literal[
     "passed",
     "failed",
@@ -120,6 +129,15 @@ class PipelineStep(BaseModel):
     log_excerpt: str | None = None
 
 
+class FileChange(BaseModel):
+    """One file in the diff, classed from triage.config.yaml path rules."""
+
+    path: str
+    kind: FileKind
+    added_lines: int = 0
+    removed_lines: int = 0
+
+
 class RunMetadata(BaseModel):
     """Identifying fields for the CI run that produced this bundle."""
 
@@ -154,3 +172,4 @@ class EvidenceBundle(BaseModel):
     artifact_paths: dict[str, str] = Field(default_factory=dict)
     logs: dict[str, str] = Field(default_factory=dict)
     notes: list[str] = Field(default_factory=list)
+    changes: list[FileChange] = Field(default_factory=list)

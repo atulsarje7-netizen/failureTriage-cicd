@@ -12,10 +12,11 @@ from triage.collect.assemble import (
     build_bundle,
     save_bundle,
 )
+from triage.collect.diff import parse_unified_diff
 from triage.collect.junit import JUnitParser
 from triage.collect.playwright_json import PlaywrightJsonParser
 from triage.config import TriageConfig, load_config
-from triage.schemas.bundle import EvidenceBundle, PipelineStep, RunMetadata, TestResult
+from triage.schemas.bundle import EvidenceBundle, FileChange, PipelineStep, RunMetadata, TestResult
 
 
 def collect_local(
@@ -68,6 +69,10 @@ def collect_local(
     if scenario:
         artifact_paths["scenario_json"] = str(scenario_path)
 
+    changes = _load_changes(base / artifacts.scenario_diff, cfg, artifact_paths)
+    _load_sidecar_logs(base, artifacts.app_log, logs, artifact_paths)
+    steps = _install_step(logs.get("install"))
+
     run = RunMetadata(
         run_id=run_id or (str(scenario.get("id")) if scenario else "local"),
         workflow="local",
@@ -77,16 +82,16 @@ def collect_local(
         source="local",
     )
     if scenario:
-        notes.append(
-            f"scenario {scenario.get('id')} expected label={scenario.get('label')}"
-        )
+        notes.append(f"scenario {scenario.get('id')} expected label={scenario.get('label')}")
 
     bundle = build_bundle(
         run=run,
         tests=tests,
+        steps=steps,
         artifact_paths=artifact_paths,
         logs=logs,
         notes=notes,
+        changes=changes,
     )
     if out_path is not None:
         save_bundle(bundle, out_path)
@@ -140,6 +145,8 @@ def collect_from_artifact_tree(
         artifact_paths[f"log:{key}"] = str(log_path)
 
     never_ran = _never_ran_from_failed_steps(steps or [], tests)
+    merged_logs = dict(logs or {})
+    changes = _load_tree_diff(artifact_root, cfg, artifact_paths)
     bundle = build_bundle(
         run=run
         or RunMetadata(
@@ -151,8 +158,9 @@ def collect_from_artifact_tree(
         steps=steps,
         never_ran=never_ran,
         artifact_paths=artifact_paths,
-        logs=dict(logs or {}),
+        logs=merged_logs,
         notes=notes,
+        changes=changes,
     )
     if out_path is not None:
         save_bundle(bundle, out_path)
@@ -180,6 +188,60 @@ def _never_ran_from_failed_steps(
                 )
             ]
     return []
+
+
+def _load_changes(
+    diff_path: Path,
+    config: TriageConfig,
+    artifact_paths: dict[str, str],
+) -> list[FileChange]:
+    """Parse a unified diff file into classed file changes when it exists."""
+    if not diff_path.is_file():
+        return []
+    artifact_paths["scenario_diff"] = str(diff_path)
+    return parse_unified_diff(diff_path.read_text(encoding="utf-8", errors="replace"), config.paths)
+
+
+def _load_tree_diff(
+    artifact_root: Path,
+    config: TriageConfig,
+    artifact_paths: dict[str, str],
+) -> list[FileChange]:
+    """Find scenario.diff under a downloaded artifact tree and class its files."""
+    diff_path = _find_named(artifact_root, "scenario.diff")
+    if diff_path is None:
+        return []
+    return _load_changes(diff_path, config, artifact_paths)
+
+
+def _load_sidecar_logs(
+    base: Path,
+    app_log: str,
+    logs: dict[str, str],
+    artifact_paths: dict[str, str],
+) -> None:
+    """Read install, setup, and compose logs that sit beside the app log."""
+    log_dir = (base / app_log).parent
+    for name in ("install", "setup", "compose"):
+        path = log_dir / f"{name}.log"
+        if path.is_file():
+            logs[name] = _read_log(path)
+            artifact_paths[f"log:{name}"] = str(path)
+
+
+def _install_step(install_log: str | None) -> list[PipelineStep]:
+    """Record an install step when an install log shows the package was missing."""
+    if not install_log:
+        return []
+    failed = "No matching distribution" in install_log or "Could not find a version" in install_log
+    return [
+        PipelineStep(
+            job_name="local",
+            name="Install dependencies",
+            conclusion="failure" if failed else "success",
+            log_excerpt=install_log[:4000],
+        )
+    ]
 
 
 def _local_conclusion(tests: list[TestResult]) -> str:

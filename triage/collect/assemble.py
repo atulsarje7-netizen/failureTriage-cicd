@@ -11,6 +11,7 @@ from triage.collect.trace import extract_http_calls
 from triage.schemas.bundle import (
     EvidenceBundle,
     ExaminedCount,
+    FileChange,
     FlowOutcome,
     HttpCall,
     LayerOutcome,
@@ -65,6 +66,7 @@ def build_bundle(
     artifact_paths: dict[str, str] | None = None,
     logs: dict[str, str] | None = None,
     notes: list[str] | None = None,
+    changes: list[FileChange] | None = None,
 ) -> EvidenceBundle:
     """Build an evidence bundle with totals, examined count, and flow matrix."""
     never = list(never_ran or [])
@@ -86,6 +88,7 @@ def build_bundle(
         artifact_paths=dict(artifact_paths or {}),
         logs=dict(logs or {}),
         notes=list(notes or []),
+        changes=list(changes or []),
     )
 
 

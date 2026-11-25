@@ -21,6 +21,24 @@ class ArtifactPaths(BaseModel):
     ui_results_dir: str = "tests/ui/test-results"
     app_log: str = "logs/app.log"
     scenario_json: str = "test-results/scenario/scenario.json"
+    scenario_diff: str = "test-results/scenario/scenario.diff"
+
+
+class PathClasses(BaseModel):
+    """Path prefixes that class a diff file as product, test, config, or infra."""
+
+    product: list[str] = Field(default_factory=lambda: ["app/"])
+    product_ui: list[str] = Field(default_factory=lambda: ["app/web/"])
+    test: list[str] = Field(default_factory=lambda: ["tests/"])
+    config: list[str] = Field(default_factory=lambda: ["triage.config.yaml", "docker-compose.yml"])
+    infra: list[str] = Field(default_factory=lambda: [".github/"])
+    dependency: list[str] = Field(
+        default_factory=lambda: [
+            "pyproject.toml",
+            "tests/ui/package.json",
+            "tests/ui/package-lock.json",
+        ]
+    )
 
 
 class FlowPathRule(BaseModel):
@@ -31,11 +49,13 @@ class FlowPathRule(BaseModel):
 
 
 class TriageConfig(BaseModel):
-    """Repo-local triage settings used by the collector."""
+    """Repo-local settings for the collector and the rules classifier."""
 
     repository: str | None = None
     artifacts: ArtifactPaths = Field(default_factory=ArtifactPaths)
+    paths: PathClasses = Field(default_factory=PathClasses)
     flow_path_rules: list[FlowPathRule] = Field(default_factory=list)
+    abstain_below: float = 0.75
 
 
 def load_config(path: Path | None = None) -> TriageConfig:
@@ -52,19 +72,23 @@ def load_config(path: Path | None = None) -> TriageConfig:
     artifacts_raw: dict[str, Any] = raw_artifacts if isinstance(raw_artifacts, dict) else {}
     raw_rules = raw.get("flow_path_rules")
     flow_rules_raw = raw_rules if isinstance(raw_rules, list) else []
-    rules = [
-        FlowPathRule.model_validate(item)
-        for item in flow_rules_raw
-        if isinstance(item, dict)
-    ]
+    rules = [FlowPathRule.model_validate(item) for item in flow_rules_raw if isinstance(item, dict)]
     repository = ci.get("repository") if isinstance(ci.get("repository"), str) else None
-    artifacts = (
-        ArtifactPaths.model_validate(artifacts_raw) if artifacts_raw else ArtifactPaths()
-    )
+    artifacts = ArtifactPaths.model_validate(artifacts_raw) if artifacts_raw else ArtifactPaths()
+    raw_paths = raw.get("paths")
+    paths = PathClasses.model_validate(raw_paths) if isinstance(raw_paths, dict) else PathClasses()
+    raw_thresholds = raw.get("thresholds")
+    abstain_below = 0.75
+    if isinstance(raw_thresholds, dict):
+        candidate = raw_thresholds.get("abstain_below")
+        if isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
+            abstain_below = float(candidate)
     return TriageConfig(
         repository=repository,
         artifacts=artifacts,
+        paths=paths,
         flow_path_rules=rules,
+        abstain_below=abstain_below,
     )
 
 

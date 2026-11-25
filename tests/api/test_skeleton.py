@@ -7,7 +7,7 @@ from triage import __version__
 
 def test_package_version() -> None:
     """Package version matches the iteration pin."""
-    assert __version__ == "0.4.0"
+    assert __version__ == "0.5.0"
 
 
 def test_triage_config_loads() -> None:
