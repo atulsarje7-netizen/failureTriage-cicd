@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="1" skipped="1" tests="4" time="0.120" timestamp="2026-11-23T20:02:51.828816-08:00" hostname="ci">
+    <testcase classname="tests.api.test_auth" name="test_login_success" file="tests/api/test_auth.py" time="0.045">
+      <properties>
+        <property name="flow_id" value="login"/>
+      </properties>
+    </testcase>
+    <testcase classname="tests.api.test_orders" name="test_checkout_empty_cart" file="tests/api/test_orders.py" time="0.027">
+      <properties>
+        <property name="flow_id" value="checkout"/>
+      </properties>
+    </testcase>
+    <testcase classname="tests.api.test_orders" name="test_checkout_creates_order_and_clears_cart" file="tests/api/test_orders.py" time="0.028">
+      <properties>
+        <property name="flow_id" value="checkout"/>
+      </properties>
+      <failure message="assert 500 == 201&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">E   assert 500 == 201
+ +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code</failure>
+    </testcase>
+    <testcase classname="tests.api.test_exchange_capture" name="test_demo_deliberate_failure" file="tests/api/test_exchange_capture.py" time="0.000">
+      <skipped type="pytest.skip" message="opt-in artifact demo">opt-in artifact demo</skipped>
+    </testcase>
+  </testsuite>
+</testsuites>

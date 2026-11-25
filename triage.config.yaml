@@ -3,12 +3,46 @@
 
 ci:
   provider: github_actions
+  # repository: owner/repo   # set for `triage collect run` without --repo
 
 paths:
   product: [app/]
   test: [tests/]
   config: [triage.config.yaml, docker-compose.yml]
   infra: [.github/]
+
+artifacts:
+  api_junit: test-results/api/junit.xml
+  api_exchanges: test-results/api/exchanges
+  ui_report: tests/ui/test-results/results.json
+  ui_results_dir: tests/ui/test-results
+  app_log: logs/app.log
+  scenario_json: test-results/scenario/scenario.json
+
+# Fallback when a report omits flow_id (JUnit without properties, older artifacts).
+flow_path_rules:
+  - pattern: tests/api/test_auth.py
+    flow_id: login
+  - pattern: tests/api/test_products.py
+    flow_id: catalog
+  - pattern: tests/api/test_cart.py
+    flow_id: cart
+  - pattern: tests/api/test_orders.py
+    flow_id: checkout
+  - pattern: tests/api/test_health.py
+    flow_id: health
+  - pattern: tests/api/test_web_security.py
+    flow_id: cart
+  - pattern: login.spec.ts
+    flow_id: login
+  - pattern: catalog.spec.ts
+    flow_id: catalog
+  - pattern: cart.spec.ts
+    flow_id: cart
+  - pattern: checkout.spec.ts
+    flow_id: checkout
+  - pattern: demo-fail.spec.ts
+    flow_id: login
 
 services:
   app:

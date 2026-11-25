@@ -1,0 +1,19 @@
+{
+  "method": "POST",
+  "url": "http://testserver/checkout",
+  "request_headers": {
+    "x-test-id": "tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart",
+    "authorization": "[redacted]"
+  },
+  "request_body": null,
+  "status_code": 500,
+  "response_headers": {
+    "content-type": "application/json",
+    "x-request-id": "1c275700-7d3c-4f59-8ca0-46a21ea6d5bd"
+  },
+  "response_body": {
+    "detail": "payment failed"
+  },
+  "latency_ms": 2.17,
+  "test_id": "tests/api/test_orders.py::test_checkout_creates_order_and_clears_cart"
+}

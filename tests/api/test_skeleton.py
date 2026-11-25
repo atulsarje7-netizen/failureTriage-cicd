@@ -6,8 +6,8 @@ from triage import __version__
 
 
 def test_package_version() -> None:
-    """Package version matches the skeleton pin."""
-    assert __version__ == "0.0.0"
+    """Package version matches the iteration pin."""
+    assert __version__ == "0.4.0"
 
 
 def test_triage_config_loads() -> None:
@@ -18,3 +18,5 @@ def test_triage_config_loads() -> None:
     assert config["ci"]["provider"] == "github_actions"
     assert "product" in config["paths"]
     assert "test" in config["paths"]
+    assert "api_junit" in config["artifacts"]
+    assert config["flow_path_rules"]

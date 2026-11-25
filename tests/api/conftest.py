@@ -76,6 +76,14 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
             item.add_marker(pytest.mark.app)
 
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item: pytest.Item) -> None:
+    """Write flow_id into JUnit properties when a flow marker is present."""
+    marker = item.get_closest_marker("flow")
+    if marker and marker.args:
+        item.user_properties.append(("flow_id", str(marker.args[0])))
+
+
 @pytest.fixture
 def api_client(
     request: pytest.FixtureRequest,

@@ -23,5 +23,8 @@ playwright/.cache/
 !.env.example
 .DS_Store
 
+# Collector output (kept local unless you choose to commit a sample).
+bundles/
+
 # Local planning docs. Kept on this machine only.
 plans/

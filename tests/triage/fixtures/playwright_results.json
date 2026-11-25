@@ -1,0 +1,147 @@
+{
+  "config": {
+    "rootDir": "/repo/tests/ui/specs",
+    "projects": [{ "name": "", "retries": 1 }]
+  },
+  "suites": [
+    {
+      "title": "checkout.spec.ts",
+      "file": "checkout.spec.ts",
+      "specs": [
+        {
+          "title": "checkout places an order visible in history",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "flow",
+                  "description": "checkout"
+                }
+              ],
+              "expectedStatus": "passed",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 412.5,
+                  "error": {
+                    "message": "Error: expect(locator).toBeVisible() failed",
+                    "stack": "Error: expect(locator).toBeVisible() failed\n    at /repo/tests/ui/specs/checkout.spec.ts:20:1"
+                  },
+                  "errors": [
+                    {
+                      "message": "Error: expect(locator).toBeVisible() failed",
+                      "stack": "Error: expect(locator).toBeVisible() failed\n    at /repo/tests/ui/specs/checkout.spec.ts:20:1"
+                    }
+                  ],
+                  "attachments": [
+                    {
+                      "name": "trace",
+                      "path": "tests/triage/fixtures/traces/checkout-fail/trace.zip",
+                      "contentType": "application/zip"
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ],
+          "id": "checkout-1",
+          "file": "checkout.spec.ts"
+        }
+      ],
+      "suites": []
+    },
+    {
+      "title": "login.spec.ts",
+      "file": "login.spec.ts",
+      "specs": [
+        {
+          "title": "alice can log in and reach the catalog",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "flow",
+                  "description": "login"
+                }
+              ],
+              "expectedStatus": "passed",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 200.0,
+                  "errors": [
+                    {
+                      "message": "Error: Timeout 5000ms exceeded.",
+                      "stack": "Error: Timeout 5000ms exceeded."
+                    }
+                  ],
+                  "attachments": []
+                },
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 180.0,
+                  "errors": [],
+                  "attachments": []
+                }
+              ],
+              "status": "flaky"
+            }
+          ],
+          "id": "login-1",
+          "file": "login.spec.ts"
+        },
+        {
+          "title": "guest can open login",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                {
+                  "type": "flow",
+                  "description": "login"
+                }
+              ],
+              "expectedStatus": "passed",
+              "projectName": "",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "passed",
+                  "duration": 90.0,
+                  "errors": [],
+                  "attachments": []
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "login-2",
+          "file": "login.spec.ts"
+        }
+      ],
+      "suites": []
+    }
+  ],
+  "stats": {
+    "startTime": "2026-11-23T20:02:52.887Z",
+    "duration": 1833.325,
+    "expected": 1,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 1
+  }
+}

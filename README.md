@@ -72,6 +72,27 @@ Exit 0 means the failure matched the manifest. The command reverts the patch whe
 
 GitHub Actions workflow **Fault scenario** takes a scenario id. The run is red on purpose, including when the failure matched, so the run is a failed CI run with downloadable artifacts. `test-results/scenario/scenario.json` carries the expected label. `outcome.json` says whether it matched.
 
+## Evidence collector
+
+The `triage` package turns a failed CI run into one evidence bundle JSON. It does not import from `app/` or `tests/`; paths and flow rules live in `triage.config.yaml`.
+
+From local artifacts (after a scenario or a CI download):
+
+```bash
+source .venv/bin/activate
+triage collect local --out bundles/local-evidence_bundle.json
+```
+
+From a GitHub Actions run id (`GITHUB_TOKEN` or `GH_TOKEN` required):
+
+```bash
+triage collect run 123456789 --repo owner/failureTriage-cicd --out bundles
+```
+
+The bundle includes normalised API (JUnit) and UI (Playwright JSON) results with `flow_id` and layer, per-flow API/UI outcomes, HTTP calls from API exchanges and Playwright traces, step conclusions from the Actions API, run totals, and an examined-N-of-M count. Tests that never ran are listed separately from failures.
+
+Collector unit tests use saved fixtures under `tests/triage/fixtures/`.
+
 ## Run API tests
 
 From the repo root, with the venv activated:
