@@ -55,7 +55,7 @@ class TriageConfig(BaseModel):
     artifacts: ArtifactPaths = Field(default_factory=ArtifactPaths)
     paths: PathClasses = Field(default_factory=PathClasses)
     flow_path_rules: list[FlowPathRule] = Field(default_factory=list)
-    abstain_below: float = 0.75
+    abstain_below: float = Field(default=0.75, ge=0.0, le=1.0)
 
 
 def load_config(path: Path | None = None) -> TriageConfig:

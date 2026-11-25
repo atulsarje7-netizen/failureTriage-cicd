@@ -104,10 +104,11 @@ def get_scenario(scenario_id: str, path: Path | None = None) -> Scenario:
     """Return one scenario by id."""
     if not _ID.fullmatch(scenario_id):
         raise ValueError(f"invalid scenario id: {scenario_id}")
-    for scenario in load_scenarios(path):
+    scenarios = load_scenarios(path)
+    for scenario in scenarios:
         if scenario.id == scenario_id:
             return scenario
-    known = ", ".join(item.id for item in load_scenarios(path))
+    known = ", ".join(item.id for item in scenarios)
     raise ValueError(f"unknown scenario {scenario_id}. Known ids: {known}")
 
 

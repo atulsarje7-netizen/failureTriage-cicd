@@ -104,9 +104,6 @@ class PlaywrightJsonParser:
             return None
         if overall is None:
             overall = _overall_from_attempts(attempts)
-        if overall == "skipped":
-            # Keep skipped so examined-N-of-M can account for them.
-            pass
 
         flow_id = _flow_from_annotations(annotations) or resolve_flow_id(
             test_id, file_path, self.flow_rules

@@ -137,15 +137,13 @@ def collect_from_artifact_tree(
     if ui_results_dir:
         artifact_paths["ui_results_dir"] = str(ui_results_dir)
 
+    merged_logs = dict(logs or {})
     for log_path in artifact_root.rglob("*.log"):
         key = log_path.stem
-        logs_map = dict(logs or {})
-        logs_map[key] = _read_log(log_path)
-        logs = logs_map
+        merged_logs[key] = _read_log(log_path)
         artifact_paths[f"log:{key}"] = str(log_path)
 
     never_ran = _never_ran_from_failed_steps(steps or [], tests)
-    merged_logs = dict(logs or {})
     changes = _load_tree_diff(artifact_root, cfg, artifact_paths)
     bundle = build_bundle(
         run=run

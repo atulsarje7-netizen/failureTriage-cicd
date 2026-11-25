@@ -5,15 +5,6 @@ from __future__ import annotations
 from triage.config import PathClasses
 from triage.schemas.bundle import FileChange, FileKind
 
-_KINDS: tuple[FileKind, ...] = (
-    "product_ui",
-    "product",
-    "test",
-    "config",
-    "infra",
-    "dependency",
-)
-
 
 def parse_unified_diff(text: str, paths: PathClasses | None = None) -> list[FileChange]:
     """Turn a unified diff into classed file changes, merging repeated paths."""
@@ -78,8 +69,6 @@ def classify_path(path: str, paths: PathClasses | None = None) -> FileKind:
         ("dependency", rules.dependency),
     )
     for kind, prefixes in table:
-        if kind not in _KINDS:
-            continue
         for prefix in prefixes:
             if _matches(normal, prefix) and len(prefix) > best_len:
                 best_len = len(prefix)

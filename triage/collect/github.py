@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import io
 import os
+import shutil
 import zipfile
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 import httpx
@@ -82,7 +83,27 @@ class GitHubActionsClient:
         response.raise_for_status()
         dest_dir.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(io.BytesIO(response.content)) as archive:
-            archive.extractall(dest_dir)
+            root = dest_dir.resolve()
+            for member in archive.infolist():
+                relative = PurePosixPath(member.filename)
+                if relative.is_absolute() or ".." in relative.parts:
+                    raise ValueError(f"artifact contains an unsafe path: {member.filename!r}")
+
+                target = (root / Path(*relative.parts)).resolve()
+                if target != root and root not in target.parents:
+                    raise ValueError(f"artifact contains an unsafe path: {member.filename!r}")
+
+                if member.is_dir():
+                    target.mkdir(parents=True, exist_ok=True)
+                    continue
+
+                # Do not allow an archive entry to create a symlink that could redirect
+                # later entries outside the artifact directory.
+                if (member.external_attr >> 16) & 0o170000 == 0o120000:
+                    raise ValueError(f"artifact contains a symbolic link: {member.filename!r}")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with archive.open(member) as source, target.open("wb") as destination:
+                    shutil.copyfileobj(source, destination)
         return dest_dir
 
     def job_logs(self, owner: str, repo: str, job_id: int, *, max_chars: int = 200_000) -> str:
