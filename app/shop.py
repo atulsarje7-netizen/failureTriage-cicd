@@ -85,6 +85,9 @@ def place_order(db: Session, user: User) -> Order:
     cart_items = db.query(CartItem).filter(CartItem.user_id == user.id).all()
     if not cart_items:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cart is empty")
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="payment failed"
+    )
     total = 0
     priced: list[tuple[CartItem, Product]] = []
     for cart_item in cart_items:
