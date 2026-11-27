@@ -11,7 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "faults" / "manifest.yaml"
 INSTALL_PACKAGE = "failure-triage-missing-dependency==0.0.0"
 
-LABELS = frozenset({"product_bug", "test_bug", "flaky_test", "environment_issue"})
+LABELS = frozenset(
+    {"product_bug", "test_bug", "flaky_test", "environment_issue", "build_break"}
+)
 CAUSE_TAGS = frozenset(
     {
         "timeout",
@@ -29,8 +31,11 @@ CAUSE_TAGS = frozenset(
         "network",
         "config",
         "runner-resource",
+        "lint",
+        "docker-build",
     }
 )
+STAGES = frozenset({"test", "install", "lint", "build"})
 LAYER_TAGS = frozenset({"api", "ui", "cross-layer"})
 TAGS = CAUSE_TAGS | LAYER_TAGS
 SERVICES = frozenset({"db", "pay"})
@@ -144,8 +149,8 @@ def _scenario(entry: object, base: Path) -> Scenario:
     if bad_tags:
         raise ValueError(f"{scenario_id}: unknown tags {bad_tags}")
     stage = _text(data, "stage")
-    if stage not in {"test", "install"}:
-        raise ValueError(f"{scenario_id}: stage must be test or install")
+    if stage not in STAGES:
+        raise ValueError(f"{scenario_id}: stage must be one of {sorted(STAGES)}")
     if stage == "test" and not LAYER_TAGS.intersection(tags):
         raise ValueError(f"{scenario_id}: test scenarios need a layer tag")
     if "cross-layer" in tags and not {"api", "ui"} <= set(tags):
@@ -168,11 +173,17 @@ def _scenario(entry: object, base: Path) -> Scenario:
         patch_path = patch
     run_api, api_nodes, run_ui, ui_grep = _run(data.get("run"), scenario_id)
     whole_run = bool(data.get("whole_run", False))
-    if stage == "install":
-        if patch_path is not None or run_api or run_ui or services:
-            raise ValueError(f"{scenario_id}: install scenarios only run the install step")
-        if "dependency-install" not in tags:
+    if stage in {"install", "lint", "build"}:
+        if run_api or run_ui or services:
+            raise ValueError(f"{scenario_id}: {stage} scenarios only run the {stage} step")
+        if stage == "install" and "dependency-install" not in tags:
             raise ValueError(f"{scenario_id}: install scenarios need dependency-install")
+        if stage == "lint" and "lint" not in tags:
+            raise ValueError(f"{scenario_id}: lint scenarios need the lint tag")
+        if stage == "build" and "docker-build" not in tags:
+            raise ValueError(f"{scenario_id}: build scenarios need docker-build")
+        if label == "build_break" and patch_path is None:
+            raise ValueError(f"{scenario_id}: build_break scenarios need a change patch")
     expect = _expect(data.get("expect"), scenario_id, stage)
     if stage == "test" and whole_run and not run_api:
         raise ValueError(f"{scenario_id}: a whole-run outage runs the API suite")
@@ -234,9 +245,9 @@ def _selector(value: object, label: str) -> tuple[bool, tuple[str, ...]]:
 
 def _expect(value: object, scenario_id: str, stage: str) -> Expectation:
     """Parse the expected pass and fail names."""
-    if stage == "install":
+    if stage in {"install", "lint", "build"}:
         if value not in (None, {}):
-            raise ValueError(f"{scenario_id}: install scenarios have no test expectations")
+            raise ValueError(f"{scenario_id}: {stage} scenarios have no test expectations")
         return Expectation((), (), (), ())
     data = _mapping(value, f"{scenario_id} expect")
     allowed = {"api_failed", "api_passed", "ui_failed", "ui_passed"}

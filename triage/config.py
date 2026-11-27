@@ -31,7 +31,7 @@ class PathClasses(BaseModel):
     product_ui: list[str] = Field(default_factory=lambda: ["app/web/"])
     test: list[str] = Field(default_factory=lambda: ["tests/"])
     config: list[str] = Field(default_factory=lambda: ["triage.config.yaml", "docker-compose.yml"])
-    infra: list[str] = Field(default_factory=lambda: [".github/"])
+    infra: list[str] = Field(default_factory=lambda: [".github/", "Dockerfile"])
     dependency: list[str] = Field(
         default_factory=lambda: [
             "pyproject.toml",
@@ -69,6 +69,14 @@ class ConfidenceSettings(BaseModel):
     llm_samples: int = Field(default=1, ge=1, le=5)
 
 
+class PublishSettings(BaseModel):
+    """Where and how draft bugs are posted after triage."""
+
+    pr_comment: bool = True
+    draft_issue: bool = True
+    draft_issue_label: str = "triage:draft"
+
+
 class TriageConfig(BaseModel):
     """Repo-local settings for the collector and classifiers."""
 
@@ -82,6 +90,7 @@ class TriageConfig(BaseModel):
     llm_model: str | None = None
     verify: VerifySettings = Field(default_factory=VerifySettings)
     confidence: ConfidenceSettings = Field(default_factory=ConfidenceSettings)
+    publish: PublishSettings = Field(default_factory=PublishSettings)
 
 
 def load_config(path: Path | None = None) -> TriageConfig:
@@ -133,6 +142,12 @@ def load_config(path: Path | None = None) -> TriageConfig:
         if isinstance(raw_confidence, dict)
         else ConfidenceSettings()
     )
+    raw_publish = raw.get("publish")
+    publish = (
+        PublishSettings.model_validate(raw_publish)
+        if isinstance(raw_publish, dict)
+        else PublishSettings()
+    )
     return TriageConfig(
         repository=repository,
         artifacts=artifacts,
@@ -144,6 +159,7 @@ def load_config(path: Path | None = None) -> TriageConfig:
         llm_model=llm_model,
         verify=verify,
         confidence=confidence,
+        publish=publish,
     )
 
 

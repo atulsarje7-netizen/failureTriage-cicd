@@ -1,0 +1,11 @@
+diff --git a/tests/api/test_skeleton.py b/tests/api/test_skeleton.py
+index de7e35f..dfe26d9 100644
+--- a/tests/api/test_skeleton.py
++++ b/tests/api/test_skeleton.py
+@@ -1,5 +1,6 @@
+ import tomllib
+ from pathlib import Path
++import unused_lint_marker_test
+ 
+ import yaml
+ 

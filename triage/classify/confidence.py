@@ -58,7 +58,7 @@ def rerun_support_for_label(
             parts.append(0.7)
         elif last_green_passed is False:
             parts.append(0.4)
-    elif label in {"product_bug", "test_bug", "environment_issue"}:
+    elif label in {"product_bug", "test_bug", "environment_issue", "build_break"}:
         if rate is not None:
             parts.append(1.0 - rate)
         if last_green_passed is True:

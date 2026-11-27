@@ -11,6 +11,8 @@ from triage.classify.pipeline import load_bundle, run_classify
 from triage.collect.collector import collect_run
 from triage.collect.local import collect_local
 from triage.config import DEFAULT_CONFIG_PATH, load_config
+from triage.report.draft import draft_reports
+from triage.report.publish import publish_drafts
 from triage.smoke import format_report, smoke_bundles, smoke_execute
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, help="CI failure triage agent.")
@@ -105,6 +107,11 @@ def run_saved_bundle(
         "--out",
         help="Where to write the verdict JSON",
     ),
+    drafts_out: Path | None = typer.Option(
+        None,
+        "--drafts",
+        help="Where to write bug-report drafts JSON (default: drafts.json next to --out)",
+    ),
     trace: Path | None = typer.Option(
         None,
         "--trace",
@@ -120,17 +127,37 @@ def run_saved_bundle(
         "--verify/--no-verify",
         help="Allow-listed same-SHA / last-green reruns (default: verify.enabled in config)",
     ),
+    publish: bool = typer.Option(
+        False,
+        "--publish/--no-publish",
+        help="Publish draft issues / PR comment (default: write drafts only)",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="With --publish, render the summary without GitHub writes",
+    ),
+    pull: int | None = typer.Option(
+        None,
+        "--pull",
+        help="Pull request number for the triage PR comment",
+    ),
     config: Path | None = typer.Option(None, "--config", help="Path to triage.config.yaml"),
 ) -> None:
     """Label a saved evidence bundle with rules or the LLM tool loop."""
     cfg = load_config(config)
-    report, run_trace = run_classify(load_bundle(bundle), cfg, engine=engine, verify=verify)
+    evidence = load_bundle(bundle)
+    report, run_trace = run_classify(evidence, cfg, engine=engine, verify=verify)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     trace_path = trace or out.with_name("trace.json")
     trace_path.write_text(run_trace.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    draft_report = draft_reports(report, evidence)
+    drafts_path = drafts_out or out.with_name("drafts.json")
+    drafts_path.write_text(draft_report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     typer.echo(f"wrote {out}")
     typer.echo(f"wrote {trace_path}")
+    typer.echo(f"wrote {drafts_path}")
     typer.echo(report.examined)
     if not report.verdicts:
         typer.echo("no failures")
@@ -139,6 +166,22 @@ def run_saved_bundle(
             f"{verdict.label} {verdict.confidence:.2f} {verdict.rule} "
             f"tests={len(verdict.test_ids)} flow={verdict.flow_id or '-'}"
         )
+    typer.echo(f"drafts={len(draft_report.drafts)} skipped={len(draft_report.skipped)}")
+    if publish:
+        result = publish_drafts(
+            draft_report,
+            config=cfg,
+            repository=cfg.repository or evidence.run.repository,
+            pull_number=pull,
+            dry_run=dry_run,
+            summary_path=out.with_name("triage-summary.md"),
+        )
+        typer.echo(
+            f"publish dry_run={result.dry_run} pr_comment={result.pr_comment_posted} "
+            f"created={result.issues_created} updated={result.issues_updated}"
+        )
+        for note in result.notes:
+            typer.echo(note)
 
 
 @app.command("smoke")

@@ -1,0 +1,10 @@
+diff --git a/Dockerfile b/Dockerfile
+index 000dd39..9dcb650 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -1,4 +1,4 @@
+-FROM python:3.13-slim
++FROM ghcr.io/failure-triage/does-not-exist:latest
+ 
+ WORKDIR /app
+ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PYTHONPATH=/app

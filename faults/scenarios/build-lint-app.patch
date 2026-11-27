@@ -1,0 +1,12 @@
+diff --git a/app/shop.py b/app/shop.py
+index 17d5b9c..bc3d43c 100644
+--- a/app/shop.py
++++ b/app/shop.py
+@@ -1,6 +1,7 @@
+ from __future__ import annotations
+ 
+ import logging
++import unused_lint_marker_app
+ 
+ from fastapi import HTTPException, status
+ from sqlalchemy import update

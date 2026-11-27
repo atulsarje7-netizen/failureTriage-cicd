@@ -369,6 +369,8 @@ def _as_label(value: str) -> Label:
         return "test_bug"
     if value == "environment_issue":
         return "environment_issue"
+    if value == "build_break":
+        return "build_break"
     return "needs_human"
 
 
@@ -385,6 +387,12 @@ def _as_stage(value: str) -> Stage:
 
 def _as_primary(value: str | None) -> PrimaryLabel | None:
     """Return a primary label, or None when the value is an abstain."""
-    if value in {"flaky_test", "product_bug", "test_bug", "environment_issue"}:
+    if value in {
+        "flaky_test",
+        "product_bug",
+        "test_bug",
+        "environment_issue",
+        "build_break",
+    }:
         return value  # type: ignore[return-value]
     return None

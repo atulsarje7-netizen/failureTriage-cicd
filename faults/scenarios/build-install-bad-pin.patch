@@ -1,0 +1,10 @@
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -16,6 +16,7 @@ dependencies = [
+     "pydantic>=2.0",
+     "typer>=0.12",
+     "defusedxml>=0.7",
++    "failure-triage-missing-dependency==0.0.0",
+ ]
+ 
+ [project.optional-dependencies]

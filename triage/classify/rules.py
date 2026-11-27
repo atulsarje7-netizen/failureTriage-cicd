@@ -36,7 +36,27 @@ _CAUSE = frozenset(
         "network",
         "config",
         "runner-resource",
+        "lint",
+        "docker-build",
     }
+)
+_NETWORK_ENV = re.compile(
+    r"Connection refused|Name or service not known|"
+    r"Failed to establish a new connection|"
+    r"Could not resolve host|"
+    r"network is unreachable|"
+    r"pull access denied|manifest unknown|"
+    r"failed to resolve reference|"
+    r"failed to fetch anonymous token|failed to authorize|"
+    r"Error response from daemon:.*pull|"
+    r"dial tcp .* connect: connection refused|"
+    r"Max retries exceeded with url|"
+    r"unexpected status from GET request to .*(ghcr\.io|docker\.io|quay\.io)",
+    re.IGNORECASE,
+)
+_PACKAGE_MISSING = re.compile(
+    r"Could not find a version that satisfies|No matching distribution found",
+    re.IGNORECASE,
 )
 _SECRET = re.compile(r"(?i)\b(password|token|secret|api_key|authorization)\b\s*[:=]\s*\S+")
 _RUNNER = re.compile(
@@ -139,19 +159,12 @@ def _early_verdict(
     facts: DiffFacts,
     log_text: str,
 ) -> RuleVerdict | None:
-    """Return a single install or whole-run verdict when the run never got that far."""
-    if _install_failed(bundle) and not _has_executed(bundle):
-        return _install_verdict(bundle)
+    """Return a single stage or whole-run verdict when the run never got that far."""
+    if not _has_executed(bundle):
+        stage_verdict = _stage_failure_verdict(bundle, facts, log_text)
+        if stage_verdict is not None:
+            return stage_verdict
     return _whole_run_verdict(bundle, facts, log_text)
-
-
-def _install_failed(bundle: EvidenceBundle) -> bool:
-    """Return whether an install step or install log failed before tests ran."""
-    for step in bundle.steps:
-        if "install" in step.name.lower() and step.conclusion in {"failure", "cancelled"}:
-            return True
-    install_log = bundle.logs.get("install", "")
-    return "No matching distribution" in install_log or "Could not find a version" in install_log
 
 
 def _has_executed(bundle: EvidenceBundle) -> bool:
@@ -159,38 +172,186 @@ def _has_executed(bundle: EvidenceBundle) -> bool:
     return any(test.status in EXECUTED_STATUSES for test in bundle.tests)
 
 
-def _install_verdict(bundle: EvidenceBundle) -> RuleVerdict:
-    """Label a failed install as one environment issue."""
-    evidence: list[EvidenceCitation] = []
-    for step in bundle.steps:
-        if "install" in step.name.lower():
-            evidence.append(
-                EvidenceCitation(source="step", ref=step.name, note="install step failed")
-            )
-            break
-    if "install" in bundle.logs:
-        evidence.append(
-            EvidenceCitation(
-                source="log",
-                ref="install",
-                note=_clip(bundle.logs["install"]),
-            )
-        )
+def _stage_failure_verdict(
+    bundle: EvidenceBundle,
+    facts: DiffFacts,
+    log_text: str,
+) -> RuleVerdict | None:
+    """Label a pre-test install, lint, or build failure by cause, not by stage name."""
+    stage, step_name, log_key = _failed_pretest_stage(bundle)
+    if stage is None:
+        return None
+    text = _stage_text(bundle, log_key, log_text)
+    evidence = _stage_evidence(bundle, stage, step_name, log_key)
+    change_caused = _stage_change_caused(stage, facts, bundle)
+    network_env = bool(_NETWORK_ENV.search(text))
+    package_missing = bool(_PACKAGE_MISSING.search(text))
+    # Network / pull failures are environment even when a Dockerfile also changed.
+    # A bad pin in the change is build_break, not environment.
+    if network_env:
+        label = "environment_issue"
+        rule = f"{stage}_environment"
+        runner_up = "build_break"
+    elif change_caused:
+        label = "build_break"
+        rule = f"{stage}_build_break"
+        runner_up = "environment_issue"
+    elif package_missing or stage == "install":
+        label = "environment_issue"
+        rule = f"{stage}_environment"
+        runner_up = "build_break"
+    else:
+        label = "build_break"
+        rule = f"{stage}_failure"
+        runner_up = "environment_issue"
+    tags = _stage_tags(stage, text, facts)
     return RuleVerdict(
-        test_ids=["(install)"],
-        label="environment_issue",
+        test_ids=[f"({stage})"],
+        label=label,
         confidence=0.9,
-        tags=["dependency-install"],
+        tags=tags,
         evidence=evidence,
         needs_human=False,
-        rule="install_failure",
-        signature=None,
+        rule=rule,
+        signature=f"{stage}:{_clip(text, 80)}",
         flow_id=None,
-        stage="install",
-        cluster_id="install",
-        runner_up_label="test_bug",
-        runner_up_confidence=0.05,
+        stage=stage,
+        cluster_id=stage,
+        runner_up_label=runner_up,
+        runner_up_confidence=0.08,
     )
+
+
+def _failed_pretest_stage(
+    bundle: EvidenceBundle,
+) -> tuple[str | None, str | None, str | None]:
+    """Return the earliest failed install/lint/build stage from steps or logs."""
+    priority = ("install", "lint", "build")
+    for stage in priority:
+        for step in bundle.steps:
+            name = step.name.lower()
+            if stage in name and step.conclusion in {"failure", "cancelled"}:
+                return stage, step.name, stage if stage in bundle.logs else None
+        log = bundle.logs.get(stage, "")
+        if log and _log_looks_failed(stage, log):
+            return stage, None, stage
+    return None, None, None
+
+
+def _log_looks_failed(stage: str, text: str) -> bool:
+    """Return whether a sidecar log shows a failed pre-test stage."""
+    if stage == "install":
+        return bool(
+            re.search(
+                r"No matching distribution|Could not find a version|ERROR:|Connection refused",
+                text,
+                re.IGNORECASE,
+            )
+        )
+    if stage == "lint":
+        return bool(re.search(r"\berror\b|Found \d+ error|F\d{3}|E\d{3}", text, re.IGNORECASE))
+    if stage == "build":
+        return bool(
+            re.search(
+                r"ERROR|failed to solve|failed to build|pull access denied|manifest unknown",
+                text,
+                re.IGNORECASE,
+            )
+        )
+    return False
+
+
+def _stage_text(bundle: EvidenceBundle, log_key: str | None, log_text: str) -> str:
+    """Combine the stage log, step excerpts, and full log text for cause matching."""
+    parts: list[str] = []
+    if log_key and log_key in bundle.logs:
+        parts.append(bundle.logs[log_key])
+    for step in bundle.steps:
+        if step.log_excerpt:
+            parts.append(step.log_excerpt)
+    parts.append(log_text)
+    return "\n".join(parts)
+
+
+def _stage_change_caused(stage: str, facts: DiffFacts, bundle: EvidenceBundle) -> bool:
+    """Return whether the diff explains a change-caused pre-test failure."""
+    kinds = {change.kind for change in bundle.changes}
+    paths = [change.path for change in bundle.changes]
+    if stage == "install":
+        return "dependency" in kinds or any(
+            path.endswith("pyproject.toml") or path.endswith("package.json") for path in paths
+        )
+    if stage == "lint":
+        return bool(kinds & {"product", "product_ui", "test"}) or any(
+            path.startswith("app/") or path.startswith("tests/") for path in paths
+        )
+    if stage == "build":
+        return "infra" in kinds or "config" in kinds or any(
+            path.endswith("Dockerfile") or path.endswith("docker-compose.yml") for path in paths
+        )
+    return not facts.no_code_change
+
+
+def _stage_tags(stage: str, text: str, facts: DiffFacts) -> list[str]:
+    """Return cause tags for a pre-test stage failure."""
+    tags: list[str] = []
+    if stage == "install":
+        tags.append("dependency-install")
+    elif stage == "lint":
+        tags.append("lint")
+    elif stage == "build":
+        tags.append("docker-build")
+    if _NETWORK_ENV.search(text) and "network" not in tags:
+        tags.append("network")
+    if stage == "build" and "config" not in tags:
+        tags.append("config")
+    if facts.only_tests and "lint" in tags and "test" not in tags:
+        tags.append("test-data")
+    return tags
+
+
+def _stage_evidence(
+    bundle: EvidenceBundle,
+    stage: str,
+    step_name: str | None,
+    log_key: str | None,
+) -> list[EvidenceCitation]:
+    """Cite the failing step, log, and relevant diff paths for a stage verdict."""
+    evidence: list[EvidenceCitation] = []
+    if step_name:
+        evidence.append(
+            EvidenceCitation(source="step", ref=step_name, note=f"{stage} step failed")
+        )
+    elif any(stage in step.name.lower() for step in bundle.steps):
+        for step in bundle.steps:
+            if stage in step.name.lower():
+                evidence.append(
+                    EvidenceCitation(source="step", ref=step.name, note=f"{stage} step failed")
+                )
+                break
+    key = log_key if log_key and log_key in bundle.logs else None
+    if key is None and stage in bundle.logs:
+        key = stage
+    if key is not None:
+        evidence.append(
+            EvidenceCitation(source="log", ref=key, note=_clip(bundle.logs[key]))
+        )
+    for change in bundle.changes:
+        if stage == "install" and change.kind == "dependency":
+            evidence.append(
+                EvidenceCitation(source="diff", ref=change.path, note="dependency change")
+            )
+        elif stage == "lint" and change.kind in {"product", "product_ui", "test"}:
+            evidence.append(
+                EvidenceCitation(source="diff", ref=change.path, note="linted source changed")
+            )
+        elif stage == "build" and (
+            change.path.endswith("Dockerfile") or change.kind in {"infra", "config"}
+        ):
+            evidence.append(
+                EvidenceCitation(source="diff", ref=change.path, note="build input changed")
+            )
+    return evidence
 
 
 def _whole_run_verdict(

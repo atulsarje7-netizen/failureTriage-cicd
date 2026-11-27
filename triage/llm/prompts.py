@@ -14,12 +14,15 @@ Primary labels (exactly one per failure cluster):
 - test_bug
 - flaky_test
 - environment_issue
+- build_break (change broke install/lint/build before tests; fix in the PR)
 - needs_human (when evidence is insufficient)
 
 Hard rules:
 - A test that has never passed is not flaky_test. Prefer needs_human or a bug label.
 - flaky_test requires a pass after fail in the same run, or mixed same-SHA rerun evidence.
 - Whole-run connection/auth outages are one environment_issue.
+- Pre-test install/lint/build failures caused by the change are build_break.
+- Unreachable registries or base-image pull failures are environment_issue, not build_break.
 - API and UI both fail on the same flow: prefer product_bug with cross-layer.
 - UI selector-not-found with a passing API on that flow: test_bug unless the diff only
   changed product UI locators/copy, which is product_bug.

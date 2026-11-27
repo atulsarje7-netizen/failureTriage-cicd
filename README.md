@@ -1,6 +1,6 @@
 # CI failure triage
 
-Python agent that labels failed CI runs (API pytest + Playwright UI) as flaky test, product bug, test bug, or environment issue, then drafts a bug report.
+Python agent that labels failed CI runs (API pytest + Playwright UI) as flaky test, product bug, test bug, environment issue, or build break, then drafts a bug report.
 
 This repo also contains a small demo shop used as the first target. The agent does not import from `app/` or `tests/`; repo-specific settings live in `triage.config.yaml`.
 
@@ -123,6 +123,19 @@ cp .env.example .env   # then edit locally
 triage run --bundle bundles/local-evidence_bundle.json --engine llm --out bundles/verdicts-llm.json
 triage smoke --bundles bundles/smoke --engine llm --out bundles/smoke-llm
 ```
+
+## Bug drafts and publishing (Iteration 8)
+
+`triage run` writes one self-sufficient draft per failure cluster to `drafts.json` (run id, tests, signature, environment, severity, reproduction). Severity is rule-based. `build_break`, `needs_human`, and `flaky_test` are skipped for draft issues (flaky may still appear in the PR summary). Issue create/update is refused outside the publish step.
+
+```bash
+triage run --bundle bundles/local-evidence_bundle.json --out bundles/verdicts.json
+triage run --bundle bundles/local-evidence_bundle.json --publish --dry-run --pull 123
+```
+
+`.github/workflows/triage.yml` runs when CI fails, collects the failed run, drafts bugs, posts a job summary / PR comment, and opens `triage:draft` issues.
+
+Pre-test install, lint, and build failures are labelled by cause: unreachable registry or image pull is `environment_issue`; a change that broke the pin, lint, or Dockerfile is `build_break` (fix in the PR, no draft bug).
 
 ## Run API tests
 

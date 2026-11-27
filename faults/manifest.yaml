@@ -991,3 +991,86 @@ scenarios:
     api: skip
     ui: skip
   expect: {}
+- id: env-install-registry-unreachable
+  label: environment_issue
+  tags:
+  - dependency-install
+  - network
+  flow_id: pipeline
+  stage: install
+  summary: The package index is unreachable, so install fails before tests run.
+  services: []
+  run:
+    api: skip
+    ui: skip
+  expect: {}
+  env:
+    PIP_INDEX_URL: http://127.0.0.1:9/simple
+    PIP_DEFAULT_TIMEOUT: '3'
+- id: build-install-bad-pin
+  label: build_break
+  tags:
+  - dependency-install
+  flow_id: pipeline
+  stage: install
+  summary: The change pins a package that does not exist, so install fails before tests run.
+  services: []
+  run:
+    api: skip
+    ui: skip
+  expect: {}
+  patch: scenarios/build-install-bad-pin.patch
+- id: build-lint-app
+  label: build_break
+  tags:
+  - lint
+  flow_id: pipeline
+  stage: lint
+  summary: The change introduces a lint error in application code, so lint fails before tests run.
+  services: []
+  run:
+    api: skip
+    ui: skip
+  expect: {}
+  patch: scenarios/build-lint-app.patch
+- id: build-lint-test
+  label: build_break
+  tags:
+  - lint
+  flow_id: pipeline
+  stage: lint
+  summary: The change introduces a lint error in test code, so lint fails before tests run.
+  services: []
+  run:
+    api: skip
+    ui: skip
+  expect: {}
+  patch: scenarios/build-lint-test.patch
+- id: build-docker-broken
+  label: build_break
+  tags:
+  - docker-build
+  - config
+  flow_id: pipeline
+  stage: build
+  summary: The change breaks the Dockerfile, so the image build fails before tests run.
+  services: []
+  run:
+    api: skip
+    ui: skip
+  expect: {}
+  patch: scenarios/build-docker-broken.patch
+- id: env-docker-pull
+  label: environment_issue
+  tags:
+  - docker-build
+  - network
+  flow_id: pipeline
+  stage: build
+  summary: The base image cannot be pulled, so the Docker build fails before tests run.
+  services: []
+  run:
+    api: skip
+    ui: skip
+  expect: {}
+  patch: scenarios/env-docker-pull.patch

@@ -9,8 +9,21 @@ from pydantic import BaseModel, Field
 VERDICT_SCHEMA_VERSION = "1"
 RULES_PROMPT_VERSION = "rules-v1"
 
-PrimaryLabel = Literal["flaky_test", "product_bug", "test_bug", "environment_issue"]
-Label = Literal["flaky_test", "product_bug", "test_bug", "environment_issue", "needs_human"]
+PrimaryLabel = Literal[
+    "flaky_test",
+    "product_bug",
+    "test_bug",
+    "environment_issue",
+    "build_break",
+]
+Label = Literal[
+    "flaky_test",
+    "product_bug",
+    "test_bug",
+    "environment_issue",
+    "build_break",
+    "needs_human",
+]
 EvidenceSource = Literal["test", "trace", "diff", "log", "flow", "step", "http"]
 Stage = Literal["install", "lint", "build", "test"]
 RerunOutcome = Literal["passed", "failed", "error", "skipped"]

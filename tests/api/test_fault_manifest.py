@@ -10,14 +10,15 @@ from faults.runner import CaseResult, judge, parse_junit, parse_playwright
 
 
 def test_manifest_has_ten_scenarios_per_label() -> None:
-    """The catalog has ten scenarios for each primary label."""
+    """The catalog keeps ten scenarios per original label, plus stage build_break cases."""
     counts = Counter(scenario.label for scenario in load_scenarios())
-    assert counts == {
-        "product_bug": 10,
-        "test_bug": 10,
-        "flaky_test": 10,
-        "environment_issue": 10,
-    }
+    assert counts["product_bug"] == 10
+    assert counts["test_bug"] == 10
+    assert counts["flaky_test"] == 10
+    assert counts["environment_issue"] >= 10
+    assert counts["build_break"] >= 4
+    stages = {scenario.stage for scenario in load_scenarios()}
+    assert {"test", "install", "lint", "build"} <= stages
 
 
 def test_catalog_covers_layer_matrix_cases() -> None:

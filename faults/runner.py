@@ -14,6 +14,8 @@ SCENARIO_DIR = ROOT / "test-results" / "scenario"
 JUNIT_PATH = ROOT / "test-results" / "api" / "junit.xml"
 UI_REPORT = ROOT / "tests" / "ui" / "test-results" / "results.json"
 INSTALL_LOG = ROOT / "logs" / "install.log"
+LINT_LOG = ROOT / "logs" / "lint.log"
+BUILD_LOG = ROOT / "logs" / "build.log"
 SETUP_LOG = ROOT / "logs" / "setup.log"
 COMPOSE_FILE = ROOT / "docker-compose.yml"
 _FAILED_UI = frozenset({"failed", "timedOut", "interrupted"})
@@ -61,11 +63,11 @@ def execute(scenario_id: str) -> int:
     _apply(scenario)
     env = _scenario_env(scenario)
     setup_failed = False
-    install_failed: bool | None = None
+    stage_failed: bool | None = None
     try:
-        _write_diff(created)
-        if scenario.stage == "install":
-            install_failed = _run_install(env)
+        _write_diff(scenario, created)
+        if scenario.stage in {"install", "lint", "build"}:
+            stage_failed = _run_pretest_stage(scenario, env)
         else:
             setup_failed = _run_services_and_tests(scenario, env)
     finally:
@@ -74,7 +76,7 @@ def execute(scenario_id: str) -> int:
         scenario,
         parse_junit(JUNIT_PATH) if scenario.run_api and JUNIT_PATH.is_file() else None,
         parse_playwright(UI_REPORT) if scenario.run_ui and UI_REPORT.is_file() else None,
-        install_failed=install_failed,
+        stage_failed=stage_failed,
         setup_failed=setup_failed,
     )
     (SCENARIO_DIR / "outcome.json").write_text(json.dumps(outcome.to_dict(), indent=2) + "\n")
@@ -110,17 +112,21 @@ def judge(
     api_cases: list[CaseResult] | None,
     ui_cases: list[CaseResult] | None,
     *,
-    install_failed: bool | None,
+    stage_failed: bool | None = None,
+    install_failed: bool | None = None,
     setup_failed: bool,
 ) -> Outcome:
     """Compare recorded results with the scenario's expected failure."""
     reasons: list[str] = []
     api_failed = tuple(case.name for case in api_cases or [] if case.failed)
     ui_failed = tuple(case.name for case in ui_cases or [] if case.failed)
-    if scenario.stage == "install":
-        matched = install_failed is True
+    pretest_failed = stage_failed if stage_failed is not None else install_failed
+    if scenario.stage in {"install", "lint", "build"}:
+        matched = pretest_failed is True
         reasons.append(
-            "install step failed" if matched else "install step did not fail as intended"
+            f"{scenario.stage} step failed"
+            if matched
+            else f"{scenario.stage} step did not fail as intended"
         )
     elif scenario.whole_run:
         matched, whole_reasons = _judge_whole_run(api_cases, setup_failed)
@@ -297,6 +303,9 @@ def _prepare_dirs() -> None:
         JUNIT_PATH,
         UI_REPORT,
         SETUP_LOG,
+        INSTALL_LOG,
+        LINT_LOG,
+        BUILD_LOG,
         ROOT / "test-results" / "api" / "order-flag-catalog",
         ROOT / "tests" / "ui" / "test-results" / "order-flag",
     ):
@@ -369,10 +378,22 @@ def _created_files(scenario: Scenario) -> tuple[str, ...]:
     return tuple(created)
 
 
-def _write_diff(created: tuple[str, ...]) -> None:
-    """Save the working tree diff, including files the patch added."""
+def _write_diff(scenario: Scenario, created: tuple[str, ...]) -> None:
+    """Save the scenario patch diff; leave it empty when the fault has no change."""
+    if scenario.patch is None and not created:
+        (SCENARIO_DIR / "scenario.diff").write_text("")
+        return
     tracked = subprocess.run(
-        ["git", "diff", "--", "app", "tests"],
+        [
+            "git",
+            "diff",
+            "--",
+            "app",
+            "tests",
+            "pyproject.toml",
+            "Dockerfile",
+            "docker-compose.yml",
+        ],
         cwd=ROOT,
         capture_output=True,
         text=True,
@@ -391,10 +412,39 @@ def _write_diff(created: tuple[str, ...]) -> None:
     (SCENARIO_DIR / "scenario.diff").write_text("".join(parts))
 
 
-def _run_install(env: dict[str, str]) -> bool:
-    """Try the missing-package install and return True when it fails as intended."""
+def _run_pretest_stage(scenario: Scenario, env: dict[str, str]) -> bool:
+    """Run install, lint, or build for a pre-test scenario and return True on failure."""
+    if scenario.stage == "install":
+        return _run_install(scenario, env)
+    if scenario.stage == "lint":
+        return _run_lint(env)
+    if scenario.stage == "build":
+        return _run_build(env)
+    return False
+
+
+def _run_install(scenario: Scenario, env: dict[str, str]) -> bool:
+    """Fail the install step via a bad pin, unreachable index, or missing package."""
+    if scenario.patch is not None:
+        command = [sys.executable, "-m", "pip", "install", "-e", "."]
+    elif env.get("PIP_INDEX_URL"):
+        # Ask for a package that is not already installed so pip must hit the index.
+        command = [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "--retries",
+            "0",
+            "--timeout",
+            "3",
+            "--no-cache-dir",
+            INSTALL_PACKAGE,
+        ]
+    else:
+        command = [sys.executable, "-m", "pip", "install", INSTALL_PACKAGE]
     completed = subprocess.run(
-        [sys.executable, "-m", "pip", "install", INSTALL_PACKAGE],
+        command,
         cwd=ROOT,
         env=env,
         capture_output=True,
@@ -404,8 +454,54 @@ def _run_install(env: dict[str, str]) -> bool:
     text = completed.stdout + "\n" + completed.stderr
     INSTALL_LOG.write_text(text)
     return completed.returncode != 0 and (
-        "No matching distribution" in text or "ERROR" in text or "Could not find" in text
+        "No matching distribution" in text
+        or "ERROR" in text
+        or "Could not find" in text
+        or "Connection refused" in text
+        or "Could not resolve" in text
+        or "Failed to establish" in text
     )
+
+
+def _run_lint(env: dict[str, str]) -> bool:
+    """Run ruff and return True when lint fails."""
+    completed = subprocess.run(
+        [sys.executable, "-m", "ruff", "check", "app", "triage", "faults", "tests/api"],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    text = completed.stdout + "\n" + completed.stderr
+    LINT_LOG.write_text(text)
+    return completed.returncode != 0
+
+
+def _run_build(env: dict[str, str]) -> bool:
+    """Build the Compose app image and return True when the build fails."""
+    completed = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-p",
+            "failure-triage",
+            "-f",
+            str(COMPOSE_FILE),
+            "--profile",
+            "app",
+            "build",
+            "app",
+        ],
+        cwd=ROOT,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    text = completed.stdout + "\n" + completed.stderr
+    BUILD_LOG.write_text(text)
+    return completed.returncode != 0
 
 
 def _compose_base() -> list[str]:

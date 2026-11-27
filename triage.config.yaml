@@ -10,7 +10,7 @@ paths:
   product_ui: [app/web/]
   test: [tests/]
   config: [triage.config.yaml, docker-compose.yml]
-  infra: [.github/]
+  infra: [.github/, Dockerfile]
   dependency:
     - pyproject.toml
     - tests/ui/package.json

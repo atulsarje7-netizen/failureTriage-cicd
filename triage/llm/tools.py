@@ -130,6 +130,7 @@ class EvidenceToolkit:
                                             "product_bug",
                                             "test_bug",
                                             "environment_issue",
+                                            "build_break",
                                             "needs_human",
                                         ],
                                     },

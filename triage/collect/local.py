@@ -71,7 +71,7 @@ def collect_local(
 
     changes = _load_changes(base / artifacts.scenario_diff, cfg, artifact_paths)
     _load_sidecar_logs(base, artifacts.app_log, logs, artifact_paths)
-    steps = _install_step(logs.get("install"))
+    steps = _pretest_steps(logs)
 
     run = RunMetadata(
         run_id=run_id or (str(scenario.get("id")) if scenario else "local"),
@@ -218,28 +218,59 @@ def _load_sidecar_logs(
     logs: dict[str, str],
     artifact_paths: dict[str, str],
 ) -> None:
-    """Read install, setup, and compose logs that sit beside the app log."""
+    """Read install, lint, build, setup, and compose logs that sit beside the app log."""
     log_dir = (base / app_log).parent
-    for name in ("install", "setup", "compose"):
+    for name in ("install", "lint", "build", "setup", "compose"):
         path = log_dir / f"{name}.log"
         if path.is_file():
             logs[name] = _read_log(path)
             artifact_paths[f"log:{name}"] = str(path)
 
 
-def _install_step(install_log: str | None) -> list[PipelineStep]:
-    """Record an install step when an install log shows the package was missing."""
-    if not install_log:
-        return []
-    failed = "No matching distribution" in install_log or "Could not find a version" in install_log
-    return [
-        PipelineStep(
-            job_name="local",
-            name="Install dependencies",
-            conclusion="failure" if failed else "success",
-            log_excerpt=install_log[:4000],
+def _pretest_steps(logs: dict[str, str]) -> list[PipelineStep]:
+    """Record install, lint, and build steps from sidecar logs when present."""
+    steps: list[PipelineStep] = []
+    mapping = (
+        ("install", "Install dependencies"),
+        ("lint", "Lint"),
+        ("build", "Build"),
+    )
+    for key, name in mapping:
+        text = logs.get(key)
+        if not text:
+            continue
+        steps.append(
+            PipelineStep(
+                job_name="local",
+                name=name,
+                conclusion="failure" if _sidecar_failed(key, text) else "success",
+                log_excerpt=text[:4000],
+            )
         )
-    ]
+    return steps
+
+
+def _sidecar_failed(stage: str, text: str) -> bool:
+    """Return whether a local sidecar log shows a failed pre-test stage."""
+    lowered = text.lower()
+    if stage == "install":
+        return any(
+            token in text
+            for token in (
+                "No matching distribution",
+                "Could not find a version",
+                "Connection refused",
+                "Could not resolve host",
+            )
+        ) or "error:" in lowered
+    if stage == "lint":
+        return "error" in lowered or "found " in lowered
+    if stage == "build":
+        return any(
+            token in lowered
+            for token in ("error", "failed to solve", "failed to build", "manifest unknown")
+        )
+    return False
 
 
 def _local_conclusion(tests: list[TestResult]) -> str:

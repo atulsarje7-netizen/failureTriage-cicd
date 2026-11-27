@@ -74,7 +74,7 @@ def citation_supported(cite: EvidenceCitation, bundle: EvidenceBundle) -> bool:
     if cite.source == "test":
         ids = {test.test_id for test in bundle.tests}
         ids.update(test.test_id for test in bundle.never_ran)
-        ids.update({"(run)", "(install)"})
+        ids.update({"(run)", "(install)", "(lint)", "(build)"})
         return cite.ref in ids
     if cite.source == "diff":
         return any(change.path == cite.ref for change in bundle.changes)
@@ -144,6 +144,8 @@ def _as_label(value: str) -> Label:
         return "test_bug"
     if value == "environment_issue":
         return "environment_issue"
+    if value == "build_break":
+        return "build_break"
     return "needs_human"
 
 
@@ -157,6 +159,8 @@ def _as_primary(value: str | None) -> PrimaryLabel | None:
         return "test_bug"
     if value == "environment_issue":
         return "environment_issue"
+    if value == "build_break":
+        return "build_break"
     return None
 
 

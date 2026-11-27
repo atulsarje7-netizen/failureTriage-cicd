@@ -132,6 +132,54 @@ def test_install_failure_is_one_environment_verdict() -> None:
     assert all(citation_supported(cite, bundle) for cite in verdict.evidence)
 
 
+def test_bad_pin_is_build_break() -> None:
+    """A dependency pin in the change that cannot resolve is build_break, not environment."""
+    bundle = _bundle(
+        [],
+        changes=[_change("pyproject.toml", "dependency")],
+        logs={
+            "install": (
+                "ERROR: No matching distribution found for "
+                "failure-triage-missing-dependency"
+            )
+        },
+        steps=[
+            PipelineStep(job_name="local", name="Install dependencies", conclusion="failure"),
+        ],
+    )
+    report, _trace = run_rules(bundle, TriageConfig())
+    assert [item.label for item in report.verdicts] == ["build_break"]
+    assert report.verdicts[0].stage == "install"
+
+
+def test_lint_and_docker_pull_stage_labels() -> None:
+    """Lint from a product change is build_break; an image pull failure is environment."""
+    lint_bundle = _bundle(
+        [],
+        changes=[_change("app/shop.py", "product")],
+        logs={"lint": "app/shop.py:1:1: F401 `unused_lint_marker_app` imported but unused"},
+        steps=[PipelineStep(job_name="local", name="Lint", conclusion="failure")],
+    )
+    lint_report, _ = run_rules(lint_bundle, TriageConfig())
+    assert lint_report.verdicts[0].label == "build_break"
+    assert lint_report.verdicts[0].stage == "lint"
+
+    pull_bundle = _bundle(
+        [],
+        changes=[_change("Dockerfile", "infra")],
+        logs={
+            "build": (
+                "ERROR: failed to solve: failed to fetch anonymous token: "
+                "unexpected status from GET request to https://ghcr.io/token: 403 Forbidden"
+            )
+        },
+        steps=[PipelineStep(job_name="local", name="Build", conclusion="failure")],
+    )
+    pull_report, _ = run_rules(pull_bundle, TriageConfig())
+    assert pull_report.verdicts[0].label == "environment_issue"
+    assert pull_report.verdicts[0].stage == "build"
+
+
 def test_cross_layer_product_bug_and_recovered_flaky(fixtures_dir: Path) -> None:
     """A checkout 500 on both layers is a product bug, and a recovered UI test is flaky."""
     api = JUnitParser().parse(fixtures_dir / "junit_api.xml")
