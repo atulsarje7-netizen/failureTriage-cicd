@@ -55,9 +55,7 @@ def test_bundle_totals_examined_and_flow_matrix(fixtures_dir: Path) -> None:
     assert any(call.status_code == 500 for call in flows["checkout"].ui_http_statuses)
 
     checkout_api = next(
-        t
-        for t in bundle.tests
-        if t.test_id.endswith("test_checkout_creates_order_and_clears_cart")
+        t for t in bundle.tests if t.test_id.endswith("test_checkout_creates_order_and_clears_cart")
     )
     assert checkout_api.http_calls
     assert checkout_api.http_calls[0].status_code == 500

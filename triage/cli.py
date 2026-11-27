@@ -7,7 +7,7 @@ from pathlib import Path
 import typer
 
 from triage import __version__
-from triage.classify.pipeline import load_bundle, run_rules
+from triage.classify.pipeline import load_bundle, run_classify
 from triage.collect.collector import collect_run
 from triage.collect.local import collect_local
 from triage.config import DEFAULT_CONFIG_PATH, load_config
@@ -110,11 +110,21 @@ def run_saved_bundle(
         "--trace",
         help="Where to write the run trace JSON (default: trace.json next to --out)",
     ),
+    engine: str = typer.Option(
+        "rules",
+        "--engine",
+        help="Classifier: rules (default) or llm (Gemini via local .env)",
+    ),
+    verify: bool | None = typer.Option(
+        None,
+        "--verify/--no-verify",
+        help="Allow-listed same-SHA / last-green reruns (default: verify.enabled in config)",
+    ),
     config: Path | None = typer.Option(None, "--config", help="Path to triage.config.yaml"),
 ) -> None:
-    """Label a saved evidence bundle with the rules-only classifier."""
+    """Label a saved evidence bundle with rules or the LLM tool loop."""
     cfg = load_config(config)
-    report, run_trace = run_rules(load_bundle(bundle), cfg)
+    report, run_trace = run_classify(load_bundle(bundle), cfg, engine=engine, verify=verify)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(report.model_dump_json(indent=2) + "\n", encoding="utf-8")
     trace_path = trace or out.with_name("trace.json")
@@ -154,6 +164,16 @@ def smoke_command(
         "--scenario",
         help="Limit to these scenario ids",
     ),
+    engine: str = typer.Option(
+        "rules",
+        "--engine",
+        help="Classifier for smoke: rules or llm",
+    ),
+    verify: bool | None = typer.Option(
+        None,
+        "--verify/--no-verify",
+        help="Allow-listed same-SHA / last-green reruns (default: verify.enabled in config)",
+    ),
     config: Path | None = typer.Option(None, "--config", help="Path to triage.config.yaml"),
 ) -> None:
     """Classify the fault catalog and list verdicts that miss the manifest."""
@@ -168,6 +188,8 @@ def smoke_command(
             out_dir=out,
             config=cfg,
             only=scenario,
+            engine=engine,
+            verify=verify,
         )
     elif bundles is not None:
         rows, code = smoke_bundles(
@@ -176,6 +198,8 @@ def smoke_command(
             out_dir=out,
             config=cfg,
             only=scenario,
+            engine=engine,
+            verify=verify,
         )
     else:
         raise typer.BadParameter("pass --execute or --bundles")

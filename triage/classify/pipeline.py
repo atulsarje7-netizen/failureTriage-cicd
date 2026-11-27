@@ -1,4 +1,4 @@
-"""Run the rules classifier and stamp verdicts with versions and a trace."""
+"""Run classifiers, verification, and stamp verdicts with versions and a trace."""
 
 from __future__ import annotations
 
@@ -21,13 +21,16 @@ from triage.schemas.verdict import (
     VerdictReport,
     Verification,
 )
+from triage.verify.verify import apply_verification
 
 
 def run_rules(
     bundle: EvidenceBundle,
     config: TriageConfig | None = None,
+    *,
+    verify: bool | None = None,
 ) -> tuple[VerdictReport, RunTrace]:
-    """Classify one bundle and return the verdict report plus the run trace."""
+    """Classify one bundle with rules, then attach verification and confidence."""
     cfg = config or load_config()
     tracer = Tracer()
     decisions = classify_bundle(bundle, cfg, tracer)
@@ -38,7 +41,27 @@ def run_rules(
         examined=bundle.examined.as_phrase(),
         verdicts=verdicts,
     )
+    report = apply_verification(report, bundle, cfg, tracer=tracer, verify_enabled=verify)
     return report, tracer.finish(__version__)
+
+
+def run_classify(
+    bundle: EvidenceBundle,
+    config: TriageConfig | None = None,
+    *,
+    engine: str = "rules",
+    verify: bool | None = None,
+) -> tuple[VerdictReport, RunTrace]:
+    """Classify with rules or LLM, then attach verification and confidence."""
+    cfg = config or load_config()
+    if engine == "rules":
+        return run_rules(bundle, cfg, verify=verify)
+    if engine == "llm":
+        from triage.llm.classify import run_llm
+        from triage.llm.factory import build_llm_client
+
+        return run_llm(bundle, cfg, build_llm_client(cfg), verify=verify)
+    raise ValueError(f"unknown engine: {engine}")
 
 
 def load_bundle(path: str | Path) -> EvidenceBundle:

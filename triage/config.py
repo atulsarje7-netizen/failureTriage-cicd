@@ -48,14 +48,40 @@ class FlowPathRule(BaseModel):
     flow_id: str
 
 
+class VerifySettings(BaseModel):
+    """Allow-listed same-SHA and last-green rerun settings."""
+
+    enabled: bool = False
+    same_sha_attempts: int = Field(default=3, ge=1, le=10)
+    last_green: bool = True
+    repo_root: str = "."
+    ui_cwd: str = "tests/ui"
+    timeout_seconds: float = Field(default=120.0, gt=0.0)
+    last_green_sha: str | None = None
+
+
+class ConfidenceSettings(BaseModel):
+    """Weights for combining rule agreement, reruns, and sample agreement."""
+
+    weight_rule: float = Field(default=0.4, ge=0.0, le=1.0)
+    weight_rerun: float = Field(default=0.4, ge=0.0, le=1.0)
+    weight_sample: float = Field(default=0.2, ge=0.0, le=1.0)
+    llm_samples: int = Field(default=1, ge=1, le=5)
+
+
 class TriageConfig(BaseModel):
-    """Repo-local settings for the collector and the rules classifier."""
+    """Repo-local settings for the collector and classifiers."""
 
     repository: str | None = None
     artifacts: ArtifactPaths = Field(default_factory=ArtifactPaths)
     paths: PathClasses = Field(default_factory=PathClasses)
     flow_path_rules: list[FlowPathRule] = Field(default_factory=list)
     abstain_below: float = Field(default=0.75, ge=0.0, le=1.0)
+    max_tool_calls: int = Field(default=12, ge=1, le=100)
+    llm_provider: str = "gemini"
+    llm_model: str | None = None
+    verify: VerifySettings = Field(default_factory=VerifySettings)
+    confidence: ConfidenceSettings = Field(default_factory=ConfidenceSettings)
 
 
 def load_config(path: Path | None = None) -> TriageConfig:
@@ -79,16 +105,45 @@ def load_config(path: Path | None = None) -> TriageConfig:
     paths = PathClasses.model_validate(raw_paths) if isinstance(raw_paths, dict) else PathClasses()
     raw_thresholds = raw.get("thresholds")
     abstain_below = 0.75
+    max_tool_calls = 12
     if isinstance(raw_thresholds, dict):
         candidate = raw_thresholds.get("abstain_below")
         if isinstance(candidate, (int, float)) and not isinstance(candidate, bool):
             abstain_below = float(candidate)
+        tool_cap = raw_thresholds.get("max_tool_calls")
+        if isinstance(tool_cap, int) and not isinstance(tool_cap, bool):
+            max_tool_calls = tool_cap
+    raw_llm = raw.get("llm")
+    llm_provider = "gemini"
+    llm_model: str | None = None
+    if isinstance(raw_llm, dict):
+        if isinstance(raw_llm.get("provider"), str):
+            llm_provider = raw_llm["provider"]
+        if isinstance(raw_llm.get("model"), str):
+            llm_model = raw_llm["model"]
+    raw_verify = raw.get("verify")
+    verify = (
+        VerifySettings.model_validate(raw_verify)
+        if isinstance(raw_verify, dict)
+        else VerifySettings()
+    )
+    raw_confidence = raw.get("confidence")
+    confidence = (
+        ConfidenceSettings.model_validate(raw_confidence)
+        if isinstance(raw_confidence, dict)
+        else ConfidenceSettings()
+    )
     return TriageConfig(
         repository=repository,
         artifacts=artifacts,
         paths=paths,
         flow_path_rules=rules,
         abstain_below=abstain_below,
+        max_tool_calls=max_tool_calls,
+        llm_provider=llm_provider,
+        llm_model=llm_model,
+        verify=verify,
+        confidence=confidence,
     )
 
 

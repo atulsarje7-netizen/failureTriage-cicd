@@ -112,6 +112,18 @@ triage smoke --bundles bundles/smoke --out bundles/smoke
 
 `triage smoke` prints the scenarios whose label missed `faults/manifest.yaml`. Abstains are listed separately from mismatches. The command exits 0 when every scenario received a verdict or an abstain. Saved bundles, verdicts, and the run trace land under `bundles/smoke/<scenario-id>/`. The bundle field `changes` is the classed diff (`product`, `product_ui`, `test`, `config`, `infra`, `dependency`).
 
+## LLM triage (Iteration 6)
+
+Rules still settle clear cases. Ambiguous ones go through a Gemini tool loop that can read tests, diffs, flows, steps, and redacted logs. Citations are checked against the bundle. Past `thresholds.max_tool_calls` the agent returns `needs_human`.
+
+Put the API key in a **local** `.env` only (gitignored). Copy `.env.example` and fill `GEMINI_API_KEY`. Never commit `.env` or put the key in `triage.config.yaml`.
+
+```bash
+cp .env.example .env   # then edit locally
+triage run --bundle bundles/local-evidence_bundle.json --engine llm --out bundles/verdicts-llm.json
+triage smoke --bundles bundles/smoke --engine llm --out bundles/smoke-llm
+```
+
 ## Run API tests
 
 From the repo root, with the venv activated:

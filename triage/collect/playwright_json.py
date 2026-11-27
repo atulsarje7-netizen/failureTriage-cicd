@@ -145,9 +145,7 @@ def _overall_from_attempts(attempts: list[TestAttempt]) -> TestStatus:
     statuses = [a.status for a in attempts]
     if any(s == "skipped" for s in statuses) and all(s == "skipped" for s in statuses):
         return "skipped"
-    prior_failed = any(
-        s in _FAILED or s in {"timed_out", "interrupted"} for s in statuses[:-1]
-    )
+    prior_failed = any(s in _FAILED or s in {"timed_out", "interrupted"} for s in statuses[:-1])
     if statuses[-1] == "passed" and prior_failed:
         return "flaky"
     return statuses[-1]

@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 import yaml
 
-from triage.classify.pipeline import run_rules
+from triage.classify.pipeline import run_classify
 from triage.collect.diff import parse_unified_diff
 from triage.collect.local import collect_local
 from triage.config import TriageConfig, load_config
@@ -106,6 +106,8 @@ def smoke_execute(
     out_dir: Path,
     config: TriageConfig | None = None,
     only: list[str] | None = None,
+    engine: str = "rules",
+    verify: bool | None = None,
 ) -> tuple[list[SmokeRow], int]:
     """Run each catalog scenario, classify its artifacts, and compare labels."""
     cfg = config or load_config()
@@ -115,7 +117,7 @@ def smoke_execute(
         scenarios = [item for item in scenarios if item.id in wanted]
     rows: list[SmokeRow] = []
     for scenario in scenarios:
-        row = _execute_one(root, scenario, out_dir, cfg)
+        row = _execute_one(root, scenario, out_dir, cfg, engine=engine, verify=verify)
         rows.append(row)
         actual = ",".join(row.actual) if row.actual else "-"
         print(
@@ -134,6 +136,8 @@ def smoke_bundles(
     out_dir: Path,
     config: TriageConfig | None = None,
     only: list[str] | None = None,
+    engine: str = "rules",
+    verify: bool | None = None,
 ) -> tuple[list[SmokeRow], int]:
     """Classify saved bundles named <scenario-id>/evidence_bundle.json."""
     cfg = config or load_config()
@@ -150,7 +154,9 @@ def smoke_bundles(
             )
             continue
         bundle = EvidenceBundle.model_validate_json(path.read_text(encoding="utf-8"))
-        rows.append(_classify_row(scenario, bundle, cfg, note="saved bundle"))
+        rows.append(
+            _classify_row(scenario, bundle, cfg, note="saved bundle", engine=engine, verify=verify)
+        )
     incomplete = [row for row in rows if row.kind in {"error", "no_verdict"}]
     _write_report(out_dir, rows)
     return rows, 1 if incomplete else 0
@@ -188,6 +194,9 @@ def _execute_one(
     scenario: SmokeScenario,
     out_dir: Path,
     config: TriageConfig,
+    *,
+    engine: str = "rules",
+    verify: bool | None = None,
 ) -> SmokeRow:
     """Execute one scenario and classify the artifacts it left behind."""
     completed = subprocess.run(
@@ -209,7 +218,15 @@ def _execute_one(
             bundle.model_dump_json(indent=2) + "\n",
             encoding="utf-8",
         )
-        return _classify_row(scenario, bundle, config, note=tail, save_dir=dest)
+        return _classify_row(
+            scenario,
+            bundle,
+            config,
+            note=tail,
+            save_dir=dest,
+            engine=engine,
+            verify=verify,
+        )
     except Exception as exc:
         return SmokeRow(
             scenario.id,
@@ -228,9 +245,11 @@ def _classify_row(
     *,
     note: str,
     save_dir: Path | None = None,
+    engine: str = "rules",
+    verify: bool | None = None,
 ) -> SmokeRow:
     """Classify a bundle and judge it against the scenario label."""
-    report, trace = run_rules(bundle, config)
+    report, trace = run_classify(bundle, config, engine=engine, verify=verify)
     if save_dir is not None:
         verdict_path = save_dir / "verdicts.json"
         trace_path = save_dir / "trace.json"

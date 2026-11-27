@@ -199,9 +199,48 @@ class GitHubActionsClient:
             downloaded[name] = target
         return downloaded
 
-    def _get_json(self, path: str) -> dict[str, Any]:
+    def find_last_green_sha(
+        self,
+        owner: str,
+        repo: str,
+        *,
+        branch: str,
+        workflow_id: int | None = None,
+        exclude_sha: str | None = None,
+        per_page: int = 30,
+    ) -> str | None:
+        """Return the newest successful head SHA on a branch, skipping exclude_sha."""
+        path = (
+            f"/repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs"
+            if workflow_id is not None
+            else f"/repos/{owner}/{repo}/actions/runs"
+        )
+        payload = self._get_json(
+            path,
+            params={
+                "branch": branch,
+                "status": "completed",
+                "conclusion": "success",
+                "per_page": per_page,
+            },
+        )
+        runs = payload.get("workflow_runs")
+        if not isinstance(runs, list):
+            return None
+        for run in runs:
+            if not isinstance(run, dict):
+                continue
+            sha = run.get("head_sha")
+            if not isinstance(sha, str) or not sha:
+                continue
+            if exclude_sha and sha == exclude_sha:
+                continue
+            return sha
+        return None
+
+    def _get_json(self, path: str, *, params: dict[str, Any] | None = None) -> dict[str, Any]:
         """GET a JSON object from the GitHub API."""
-        response = self._client.get(path)
+        response = self._client.get(path, params=params)
         response.raise_for_status()
         payload = response.json()
         if not isinstance(payload, dict):

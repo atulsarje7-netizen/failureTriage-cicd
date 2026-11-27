@@ -1,3 +1,4 @@
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -6,8 +7,11 @@ from triage import __version__
 
 
 def test_package_version() -> None:
-    """Package version matches the iteration pin."""
-    assert __version__ == "0.5.0"
+    """Runtime package version matches the version declared in project metadata."""
+    project_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    with project_path.open("rb") as stream:
+        project = tomllib.load(stream)
+    assert __version__ == project["project"]["version"]
 
 
 def test_triage_config_loads() -> None:

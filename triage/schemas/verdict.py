@@ -1,4 +1,4 @@
-"""Versioned verdicts produced by the rules classifier."""
+"""Versioned verdicts produced by the rules and LLM classifiers."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ PrimaryLabel = Literal["flaky_test", "product_bug", "test_bug", "environment_iss
 Label = Literal["flaky_test", "product_bug", "test_bug", "environment_issue", "needs_human"]
 EvidenceSource = Literal["test", "trace", "diff", "log", "flow", "step", "http"]
 Stage = Literal["install", "lint", "build", "test"]
+RerunOutcome = Literal["passed", "failed", "error", "skipped"]
 
 
 class EvidenceCitation(BaseModel):
@@ -30,12 +31,39 @@ class RunnerUp(BaseModel):
     confidence: float
 
 
+class RerunAttempt(BaseModel):
+    """One allow-listed rerun of a single test id."""
+
+    test_id: str
+    sha: str | None = None
+    outcome: RerunOutcome
+    detail: str | None = None
+
+
 class Verification(BaseModel):
-    """Rerun evidence. Same-SHA and last-green fields are filled in a later iteration."""
+    """Rerun evidence from the same run, same SHA, and last green SHA."""
 
     same_sha_reruns: str | None = None
     last_green_sha: str | None = None
     same_run_retries: str | None = None
+    last_green_commit: str | None = None
+    same_sha_attempts: list[RerunAttempt] = Field(default_factory=list)
+    last_green_attempts: list[RerunAttempt] = Field(default_factory=list)
+    skipped_reason: str | None = None
+
+
+class ConfidenceInputs(BaseModel):
+    """Recorded inputs that produced Verdict.confidence, for later calibration."""
+
+    rule_confidence: float
+    rule_agreement: float
+    same_sha_pass_rate: float | None = None
+    last_green_passed: bool | None = None
+    sample_agreement: float
+    rerun_support: float | None = None
+    weights: dict[str, float] = Field(default_factory=dict)
+    components: dict[str, float] = Field(default_factory=dict)
+    raw_score: float
 
 
 class Verdict(BaseModel):
@@ -52,6 +80,7 @@ class Verdict(BaseModel):
     stage: Stage = "test"
     evidence: list[EvidenceCitation] = Field(default_factory=list)
     verification: Verification | None = None
+    confidence_inputs: ConfidenceInputs | None = None
     needs_human: bool = False
     versions: dict[str, str] = Field(default_factory=dict)
     signature: str | None = None
