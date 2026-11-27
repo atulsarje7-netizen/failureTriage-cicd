@@ -32,7 +32,7 @@ jobs:
           python -m pip install -e ".[app,dev]"
 
       - name: Lint
-        run: ruff check app triage faults tests/api
+        run: ruff check app triage faults tests/api tests/triage
 
       - name: Type check
         run: mypy

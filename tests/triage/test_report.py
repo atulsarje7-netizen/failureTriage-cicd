@@ -10,6 +10,7 @@ import httpx
 import pytest
 from typer.testing import CliRunner
 
+from tests.triage.fakes import FakeWriter
 from triage.classify.pipeline import run_rules
 from triage.cli import app
 from triage.collect.assemble import build_bundle
@@ -23,7 +24,6 @@ from triage.report.issues import (
 )
 from triage.report.publish import publish_drafts
 from triage.report.severity import score_severity
-from tests.triage.fakes import FakeWriter
 from triage.schemas.bundle import (
     EvidenceBundle,
     FileChange,
