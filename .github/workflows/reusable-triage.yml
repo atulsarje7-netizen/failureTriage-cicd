@@ -55,6 +55,16 @@ on:
         required: false
         type: boolean
         default: false
+      pull-number:
+        description: Pull request number for the triage comment (0 means look it up)
+        required: false
+        type: number
+        default: 0
+      head-sha:
+        description: Commit SHA of the failed run, used to resolve the PR when needed
+        required: false
+        type: string
+        default: ""
     secrets:
       github-token:
         description: Token with actions read plus issues/pull-requests write for publish
@@ -77,6 +87,7 @@ jobs:
     permissions:
       contents: read
       actions: read
+      pull-requests: read
     outputs:
       pull_number: ${{ steps.classify.outputs.pull_number }}
     steps:
@@ -149,6 +160,8 @@ jobs:
           CONFIG_PATH: ${{ inputs.config-path }}
           ENGINE: ${{ inputs.engine }}
           VERIFY: ${{ inputs.verify }}
+          PULL_NUMBER_INPUT: ${{ inputs.pull-number }}
+          HEAD_SHA: ${{ inputs.head-sha }}
         run: |
           BUNDLE=$(find bundles -name evidence_bundle.json | head -n 1)
           test -n "$BUNDLE"
@@ -160,7 +173,16 @@ jobs:
           if [ -z "$REPO" ]; then
             REPO="${GITHUB_REPOSITORY}"
           fi
-          PR_NUMBER=$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/pull-requests" --jq '.[0].number // empty')
+          PR_NUMBER=""
+          if [ -n "$PULL_NUMBER_INPUT" ] && [ "$PULL_NUMBER_INPUT" != "0" ]; then
+            PR_NUMBER="$PULL_NUMBER_INPUT"
+          fi
+          if [ -z "$PR_NUMBER" ]; then
+            PR_NUMBER=$(gh api "repos/${REPO}/actions/runs/${RUN_ID}/pull-requests" --jq '.[0].number // empty' 2>/dev/null || true)
+          fi
+          if [ -z "$PR_NUMBER" ] && [ -n "$HEAD_SHA" ]; then
+            PR_NUMBER=$(gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" -H "Accept: application/vnd.github.groot-preview+json" --jq '.[0].number // empty' 2>/dev/null || true)
+          fi
           echo "pull_number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
           VERIFY_FLAG=--no-verify
           if [ "$VERIFY" = "true" ]; then

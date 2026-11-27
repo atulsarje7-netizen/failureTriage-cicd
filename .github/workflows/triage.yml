@@ -22,6 +22,8 @@ jobs:
       engine: rules
       verify: false
       install-mode: local
+      pull-number: ${{ github.event.workflow_run.pull_requests[0].number || 0 }}
+      head-sha: ${{ github.event.workflow_run.head_sha }}
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
       gemini-api-key: ${{ secrets.GEMINI_API_KEY }}

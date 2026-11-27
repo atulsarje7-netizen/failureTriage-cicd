@@ -96,9 +96,12 @@ jobs:
       engine: rules
       install-mode: git
       triage-ref: main
+      pull-number: ${{ github.event.workflow_run.pull_requests[0].number || 0 }}
+      head-sha: ${{ github.event.workflow_run.head_sha }}
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 ```
+
 
 Pin `triage-ref` to a release tag once you ship one. For LLM classification, pass `engine: llm` and secret `gemini-api-key`.
 

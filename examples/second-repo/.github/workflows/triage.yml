@@ -24,5 +24,7 @@ jobs:
       install-mode: git
       triage-repository: atulsarje7-netizen/failureTriage-cicd
       triage-ref: main
+      pull-number: ${{ github.event.workflow_run.pull_requests[0].number || 0 }}
+      head-sha: ${{ github.event.workflow_run.head_sha }}
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
