@@ -23,6 +23,7 @@ from triage.report.issues import (
 )
 from triage.report.publish import publish_drafts
 from triage.report.severity import score_severity
+from tests.triage.fakes import FakeWriter
 from triage.schemas.bundle import (
     EvidenceBundle,
     FileChange,
@@ -70,86 +71,6 @@ def _failed(test_id: str = "tests/api/test_orders.py::test_checkout") -> Evidenc
         message="AssertionError: expected 200",
         stack='File "tests/api/test_orders.py", line 10, in test_checkout\nAssertionError',
     )
-
-
-class FakeWriter:
-    """In-memory GitHub writer for publish tests."""
-
-    def __init__(self) -> None:
-        """Start with empty create/update/comment logs."""
-        self.created: list[dict[str, Any]] = []
-        self.updated: list[dict[str, Any]] = []
-        self.comments: list[dict[str, Any]] = []
-        self._next = 101
-
-    def create_issue(
-        self,
-        owner: str,
-        repo: str,
-        *,
-        title: str,
-        body: str,
-        labels: list[str],
-    ) -> dict[str, Any]:
-        """Record a created issue."""
-        require_issue_write_allowed()
-        number = self._next
-        self._next += 1
-        payload = {
-            "number": number,
-            "title": title,
-            "body": body,
-            "labels": labels,
-            "owner": owner,
-            "repo": repo,
-        }
-        self.created.append(payload)
-        return payload
-
-    def update_issue(
-        self,
-        owner: str,
-        repo: str,
-        issue_number: int,
-        *,
-        title: str | None = None,
-        body: str | None = None,
-        labels: list[str] | None = None,
-        state: str | None = None,
-    ) -> dict[str, Any]:
-        """Record an updated issue."""
-        require_issue_write_allowed()
-        payload = {
-            "number": issue_number,
-            "title": title,
-            "body": body,
-            "labels": labels,
-            "state": state,
-            "owner": owner,
-            "repo": repo,
-        }
-        self.updated.append(payload)
-        return payload
-
-    def create_or_update_comment(
-        self,
-        owner: str,
-        repo: str,
-        *,
-        issue_number: int | None = None,
-        pull_number: int | None = None,
-        body: str,
-    ) -> dict[str, Any]:
-        """Record a PR comment."""
-        payload = {
-            "owner": owner,
-            "repo": repo,
-            "pull_number": pull_number,
-            "issue_number": issue_number,
-            "body": body,
-        }
-        self.comments.append(payload)
-        return payload
 
 
 def test_issue_writes_refused_outside_publish() -> None:

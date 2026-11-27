@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from tests.triage.test_report import FakeWriter
+from tests.triage.fakes import FakeWriter
 from triage.audit import AuditLog
 from triage.collect.assemble import build_bundle
 from triage.config import AuditSettings, PublishSettings, TriageConfig

@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      actions: write
+      actions: read
     outputs:
       pull_number: ${{ steps.classify.outputs.pull_number }}
     steps:

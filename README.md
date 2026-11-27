@@ -158,7 +158,7 @@ python -m pip install "failure-triage @ git+https://github.com/atulsarje7-netize
 
 Point another pipeline at it with `triage.config.yaml` plus the reusable workflow `.github/workflows/reusable-triage.yml`. Onboarding (required artifacts and config fields) is in [docs/onboarding.md](docs/onboarding.md). The throwaway second layout under [examples/second-repo](examples/second-repo) is triaged with config changes only; `tests/triage/test_reuse.py` is the automated proof.
 
-## Run API tests
+## Run Python tests
 
 From the repo root, with the venv activated:
 
@@ -167,17 +167,17 @@ source .venv/bin/activate
 pytest
 ```
 
-That runs pytest under `tests/api/` (httpx against the FastAPI app). CI writes JUnit XML as:
+This runs both the FastAPI tests in `tests/api/` and the agent tests in `tests/triage/`. To run only the API tests, use `pytest tests/api`. CI writes JUnit XML as:
 
 ```bash
 mkdir -p test-results/api logs
-APP_LOG_PATH=logs/app.log pytest -q --junitxml=test-results/api/junit.xml
+APP_LOG_PATH=logs/app.log pytest -q tests/api --junitxml=test-results/api/junit.xml
 ```
 
 To generate failure artifacts (JUnit, app log, captured request/response) without making the default suite red:
 
 ```bash
-APP_LOG_PATH=logs/app.log DEMO_FAIL=1 pytest -q --junitxml=test-results/api/junit.xml
+APP_LOG_PATH=logs/app.log DEMO_FAIL=1 pytest -q tests/api --junitxml=test-results/api/junit.xml
 ```
 
 Then look at `test-results/api/junit.xml`, `logs/app.log`, and `test-results/api/exchanges/`. Passwords and tokens in those exchange files are redacted.

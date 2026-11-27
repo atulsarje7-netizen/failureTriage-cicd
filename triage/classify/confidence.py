@@ -22,16 +22,6 @@ def rule_agreement(rule_confidence: float, runner_up_confidence: float | None) -
     return top / (top + rival)
 
 
-def sample_agreement_from_labels(labels: list[str]) -> float:
-    """Fraction of repeated samples that share the plurality label."""
-    if not labels:
-        return 0.0
-    counts: dict[str, int] = {}
-    for label in labels:
-        counts[label] = counts.get(label, 0) + 1
-    return max(counts.values()) / len(labels)
-
-
 def sample_agreement_from_runner_up(
     rule_confidence: float,
     runner_up_confidence: float | None,

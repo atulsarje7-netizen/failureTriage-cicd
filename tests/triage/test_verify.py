@@ -351,4 +351,3 @@ def test_load_config_reads_verify_and_confidence() -> None:
     assert config.verify.enabled is False
     assert config.verify.same_sha_attempts == 3
     assert config.confidence.weight_rule == 0.4
-    assert config.confidence.llm_samples == 1

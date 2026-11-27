@@ -70,7 +70,6 @@ class ConfidenceSettings(BaseModel):
     weight_rule: float = Field(default=0.4, ge=0.0, le=1.0)
     weight_rerun: float = Field(default=0.4, ge=0.0, le=1.0)
     weight_sample: float = Field(default=0.2, ge=0.0, le=1.0)
-    llm_samples: int = Field(default=1, ge=1, le=5)
 
 
 class PublishSettings(BaseModel):

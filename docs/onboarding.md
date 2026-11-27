@@ -82,7 +82,7 @@ on:
     types: [completed]
 permissions:
   contents: read
-  actions: write
+  actions: read
   issues: write
   pull-requests: write
 jobs:
