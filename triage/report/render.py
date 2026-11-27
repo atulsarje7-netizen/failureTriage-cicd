@@ -66,5 +66,13 @@ def render_markdown(draft: BugReportDraft) -> str:
                 draft.suggested_fix,
             ]
         )
+    if draft.flakiness_score is not None or draft.quarantine_recommendation:
+        lines.extend(["", "### Flakiness", ""])
+        if draft.flakiness_score is not None:
+            lines.append(f"- **Score:** {draft.flakiness_score:.2f}")
+        if draft.quarantine_recommendation:
+            lines.append(f"- **Recommendation:** {draft.quarantine_recommendation}")
+        else:
+            lines.append("- _(no quarantine recommended)_")
     lines.append("")
     return "\n".join(lines)

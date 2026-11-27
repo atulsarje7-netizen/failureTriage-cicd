@@ -286,8 +286,12 @@ def _stage_change_caused(stage: str, facts: DiffFacts, bundle: EvidenceBundle) -
             path.startswith("app/") or path.startswith("tests/") for path in paths
         )
     if stage == "build":
-        return "infra" in kinds or "config" in kinds or any(
-            path.endswith("Dockerfile") or path.endswith("docker-compose.yml") for path in paths
+        return (
+            "infra" in kinds
+            or "config" in kinds
+            or any(
+                path.endswith("Dockerfile") or path.endswith("docker-compose.yml") for path in paths
+            )
         )
     return not facts.no_code_change
 
@@ -319,9 +323,7 @@ def _stage_evidence(
     """Cite the failing step, log, and relevant diff paths for a stage verdict."""
     evidence: list[EvidenceCitation] = []
     if step_name:
-        evidence.append(
-            EvidenceCitation(source="step", ref=step_name, note=f"{stage} step failed")
-        )
+        evidence.append(EvidenceCitation(source="step", ref=step_name, note=f"{stage} step failed"))
     elif any(stage in step.name.lower() for step in bundle.steps):
         for step in bundle.steps:
             if stage in step.name.lower():
@@ -333,9 +335,7 @@ def _stage_evidence(
     if key is None and stage in bundle.logs:
         key = stage
     if key is not None:
-        evidence.append(
-            EvidenceCitation(source="log", ref=key, note=_clip(bundle.logs[key]))
-        )
+        evidence.append(EvidenceCitation(source="log", ref=key, note=_clip(bundle.logs[key])))
     for change in bundle.changes:
         if stage == "install" and change.kind == "dependency":
             evidence.append(

@@ -139,8 +139,7 @@ def test_bad_pin_is_build_break() -> None:
         changes=[_change("pyproject.toml", "dependency")],
         logs={
             "install": (
-                "ERROR: No matching distribution found for "
-                "failure-triage-missing-dependency"
+                "ERROR: No matching distribution found for failure-triage-missing-dependency"
             )
         },
         steps=[

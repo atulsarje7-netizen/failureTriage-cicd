@@ -88,3 +88,24 @@ publish:
   pr_comment: true
   draft_issue: true
   draft_issue_label: triage:draft
+
+# Cross-run history (SQLite). Flakiness is reported; the agent never quarantines.
+history:
+  enabled: true
+  path: .triage/history.db
+  quarantine_recommend_at: 0.3
+
+# Per-run ceilings. Exceeding any limit stops the run cleanly with needs_human.
+budgets:
+  max_latency_ms: 120000
+  max_tokens: 200000
+  max_cost_usd: 0.50
+  input_cost_per_1m: 0.10
+  output_cost_per_1m: 0.40
+
+audit:
+  enabled: true
+  path: .triage/audit.jsonl
+
+feedback:
+  path: .triage/feedback.jsonl

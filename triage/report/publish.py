@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from triage.audit import AuditLog
 from triage.config import TriageConfig, load_config
 from triage.report.draft import summary_markdown
 from triage.report.issues import GitHubIssueClient, IssueWriter, allow_issue_writes
@@ -22,6 +23,7 @@ class PublishResult:
     issues_updated: list[int] = field(default_factory=list)
     dry_run: bool = False
     notes: list[str] = field(default_factory=list)
+    audit_entries: int = 0
 
 
 def publish_drafts(
@@ -33,6 +35,7 @@ def publish_drafts(
     writer: IssueWriter | None = None,
     dry_run: bool = False,
     summary_path: Path | None = None,
+    audit: AuditLog | None = None,
 ) -> PublishResult:
     """Write the job summary, optional PR comment, and draft issues under the write guard."""
     cfg = config or load_config()
@@ -49,6 +52,14 @@ def publish_drafts(
 
     if dry_run:
         result.notes.append("dry-run: skipped GitHub writes")
+        audit_log = audit or (_audit_from_config(cfg) if cfg.audit.enabled else None)
+        if audit_log is not None:
+            entries = audit_log.record_publish(
+                draft_report,
+                notes=["dry-run"],
+            )
+            result.audit_entries = len(entries)
+            result.notes.append(f"wrote audit {audit_log.path}")
         return result
 
     owner, repo = _split_repository(repository or cfg.repository)
@@ -57,6 +68,7 @@ def publish_drafts(
         return result
 
     client = writer or GitHubIssueClient()
+    draft_to_issue: dict[str, int] = {}
     try:
         if settings.pr_comment and pull_number is not None:
             client.create_or_update_comment(
@@ -81,6 +93,7 @@ def publish_drafts(
                     )
                     if number is None:
                         continue
+                    draft_to_issue[draft.draft_id] = number
                     if updated:
                         result.issues_updated.append(number)
                     else:
@@ -89,7 +102,21 @@ def publish_drafts(
         close = getattr(client, "close", None)
         if callable(close) and writer is None:
             close()
+
+    audit_log = audit or (_audit_from_config(cfg) if cfg.audit.enabled else None)
+    if audit_log is not None:
+        entries = audit_log.record_publish(
+            draft_report,
+            issue_numbers=draft_to_issue,
+        )
+        result.audit_entries = len(entries)
+        result.notes.append(f"wrote audit {audit_log.path}")
     return result
+
+
+def _audit_from_config(cfg: TriageConfig) -> AuditLog:
+    """Open the configured audit log path."""
+    return AuditLog(cfg.audit.path)
 
 
 def _upsert_draft_issue(

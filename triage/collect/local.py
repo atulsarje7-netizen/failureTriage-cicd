@@ -254,15 +254,18 @@ def _sidecar_failed(stage: str, text: str) -> bool:
     """Return whether a local sidecar log shows a failed pre-test stage."""
     lowered = text.lower()
     if stage == "install":
-        return any(
-            token in text
-            for token in (
-                "No matching distribution",
-                "Could not find a version",
-                "Connection refused",
-                "Could not resolve host",
+        return (
+            any(
+                token in text
+                for token in (
+                    "No matching distribution",
+                    "Could not find a version",
+                    "Connection refused",
+                    "Could not resolve host",
+                )
             )
-        ) or "error:" in lowered
+            or "error:" in lowered
+        )
     if stage == "lint":
         return "error" in lowered or "found " in lowered
     if stage == "build":

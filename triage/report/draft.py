@@ -11,14 +11,27 @@ from triage.schemas.bundle import EvidenceBundle, TestResult
 from triage.schemas.report import BugReportDraft, DraftReport, DraftSkipReason
 from triage.schemas.verdict import Verdict, VerdictReport
 from triage.signals.signature import failure_text
+from triage.store.history import HistoryStore
 
 
-def draft_reports(report: VerdictReport, bundle: EvidenceBundle) -> DraftReport:
+def draft_reports(
+    report: VerdictReport,
+    bundle: EvidenceBundle,
+    *,
+    history: HistoryStore | None = None,
+    quarantine_at: float = 0.3,
+) -> DraftReport:
     """Turn each clustered verdict into a draft or an explicit skip."""
     drafts: list[BugReportDraft] = []
     skipped: list[BugReportDraft] = []
     for index, verdict in enumerate(report.verdicts, start=1):
-        draft = draft_from_verdict(verdict, bundle, index=index)
+        draft = draft_from_verdict(
+            verdict,
+            bundle,
+            index=index,
+            history=history,
+            quarantine_at=quarantine_at,
+        )
         if draft.publishable:
             drafts.append(draft)
         else:
@@ -37,6 +50,8 @@ def draft_from_verdict(
     bundle: EvidenceBundle,
     *,
     index: int,
+    history: HistoryStore | None = None,
+    quarantine_at: float = 0.3,
 ) -> BugReportDraft:
     """Build one draft for a verdict, marking unpublishable labels as skipped."""
     skip = _skip_reason(verdict)
@@ -47,6 +62,11 @@ def draft_from_verdict(
     reproduction = _reproduction(verdict, tests)
     suggested = _suggested_fix(verdict)
     title = _title(verdict, tests)
+    flakiness, quarantine = _flakiness_fields(
+        verdict,
+        history=history,
+        quarantine_at=quarantine_at,
+    )
     draft = BugReportDraft(
         draft_id=f"{verdict.cluster_id}-{index}",
         cluster_id=verdict.cluster_id,
@@ -71,11 +91,36 @@ def draft_from_verdict(
         suspect_files=suspect_files,
         reproduction=reproduction,
         suggested_fix=suggested,
+        flakiness_score=flakiness,
+        quarantine_recommendation=quarantine,
         publishable=skip is None,
         skip_reason=skip,
     )
     draft.markdown = render_markdown(draft)
     return draft
+
+
+def _flakiness_fields(
+    verdict: Verdict,
+    *,
+    history: HistoryStore | None,
+    quarantine_at: float,
+) -> tuple[float | None, str | None]:
+    """Look up cross-run flakiness; recommend quarantine but never apply it."""
+    if history is None:
+        return None, None
+    test_ids = list(verdict.test_ids) or [verdict.test_id]
+    score = history.best_flakiness(test_ids, quarantine_at=quarantine_at)
+    if score is None or score.total_runs == 0:
+        return None, None
+    recommendation = None
+    if score.recommend_quarantine or verdict.label == "flaky_test":
+        recommendation = (
+            f"Consider quarantining `{score.test_id}` "
+            f"(flakiness {score.score:.2f} over {score.total_runs} runs). "
+            "The agent does not quarantine tests automatically."
+        )
+    return score.score, recommendation
 
 
 def _skip_reason(verdict: Verdict) -> DraftSkipReason | None:
@@ -224,8 +269,9 @@ def summary_markdown(draft_report: DraftReport) -> str:
         lines.append("")
         for draft in draft_report.skipped:
             reason = draft.skip_reason or "skipped"
-            lines.append(f"- `{draft.label}` ({reason}) — {draft.title}")
+            extra = ""
+            if draft.quarantine_recommendation:
+                extra = f" — {draft.quarantine_recommendation}"
+            lines.append(f"- `{draft.label}` ({reason}) — {draft.title}{extra}")
         lines.append("")
     return "\n".join(lines)
-
-

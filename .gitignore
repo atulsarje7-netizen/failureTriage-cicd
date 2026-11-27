@@ -26,5 +26,8 @@ playwright/.cache/
 # Collector output (kept local unless you choose to commit a sample).
 bundles/
 
+# Local triage history, audit, and feedback stores.
+.triage/
+
 # Local planning docs. Kept on this machine only.
 plans/

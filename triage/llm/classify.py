@@ -6,10 +6,11 @@ import math
 from typing import Any, cast
 
 from triage import __version__
+from triage.budget import BudgetGuard
 from triage.classify.pipeline import citation_supported
 from triage.classify.recording import Tracer
 from triage.classify.rules import RuleVerdict, classify_bundle
-from triage.config import TriageConfig
+from triage.config import TriageConfig, budget_settings_from_config
 from triage.llm.base import LLMClient
 from triage.llm.loop import run_tool_loop
 from triage.llm.prompts import LLM_PROMPT_VERSION, SYSTEM_PROMPT, user_prompt
@@ -40,6 +41,7 @@ def run_llm(
     client: LLMClient,
     *,
     verify: bool | None = None,
+    history: Any | None = None,
 ) -> tuple[VerdictReport, RunTrace]:
     """Classify with rules hints plus an LLM tool loop; abstain when capped."""
     tracer = Tracer()
@@ -86,6 +88,8 @@ def run_llm(
         bundle,
         rule_summary=rule_summary,
         allowed_test_ids=ambiguous_test_ids,
+        history=history,
+        quarantine_at=config.history.quarantine_recommend_at,
     )
     messages = [
         ChatMessage(role="system", content=SYSTEM_PROMPT),
@@ -101,22 +105,34 @@ def run_llm(
             ),
         ),
     ]
+    budget = BudgetGuard(budget_settings_from_config(config))
+    budget.sync_from_tracer(tracer)
     loop = run_tool_loop(
         client,
         toolkit,
         messages,
         max_tool_calls=config.max_tool_calls,
         tracer=tracer,
+        budget=budget,
     )
 
-    if loop.capped or loop.verdicts is None:
+    if loop.budget_exceeded or loop.capped or loop.verdicts is None:
+        reason = (
+            f"budget_{loop.budget_exceeded}" if loop.budget_exceeded else (loop.error or "tool_cap")
+        )
         with tracer.step(
             "llm_abstain",
-            {"capped": loop.capped, "error": loop.error, "tool_calls": loop.tool_calls},
+            {
+                "capped": loop.capped,
+                "budget_exceeded": loop.budget_exceeded,
+                "error": loop.error,
+                "tool_calls": loop.tool_calls,
+                "budget": budget.status().as_dict(),
+            },
         ) as box:
-            box["output"] = {"fallback": "needs_human"}
+            box["output"] = {"fallback": "needs_human", "reason": reason}
         llm_verdicts = [
-            _needs_human_verdict(bundle, item, client.model_name, reason=loop.error or "tool_cap")
+            _needs_human_verdict(bundle, item, client.model_name, reason=reason)
             for item in ambiguous
         ]
     else:

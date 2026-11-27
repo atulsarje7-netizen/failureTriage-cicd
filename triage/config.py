@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from triage.budget import BudgetSettings
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG_PATH = ROOT / "triage.config.yaml"
@@ -77,6 +80,37 @@ class PublishSettings(BaseModel):
     draft_issue_label: str = "triage:draft"
 
 
+class HistorySettings(BaseModel):
+    """SQLite history store path and quarantine recommendation threshold."""
+
+    path: str = ".triage/history.db"
+    quarantine_recommend_at: float = Field(default=0.3, ge=0.0, le=1.0)
+    enabled: bool = True
+
+
+class BudgetSettingsModel(BaseModel):
+    """Per-run cost and latency ceilings; null means unlimited for that dimension."""
+
+    max_latency_ms: float | None = Field(default=120_000.0, gt=0.0)
+    max_tokens: int | None = Field(default=200_000, ge=1)
+    max_cost_usd: float | None = Field(default=0.50, gt=0.0)
+    input_cost_per_1m: float = Field(default=0.10, ge=0.0)
+    output_cost_per_1m: float = Field(default=0.40, ge=0.0)
+
+
+class AuditSettings(BaseModel):
+    """Append-only audit log path for verdicts and publishes."""
+
+    path: str = ".triage/audit.jsonl"
+    enabled: bool = True
+
+
+class FeedbackSettings(BaseModel):
+    """Where human confirm/correct feedback is stored for Evals."""
+
+    path: str = ".triage/feedback.jsonl"
+
+
 class TriageConfig(BaseModel):
     """Repo-local settings for the collector and classifiers."""
 
@@ -91,6 +125,10 @@ class TriageConfig(BaseModel):
     verify: VerifySettings = Field(default_factory=VerifySettings)
     confidence: ConfidenceSettings = Field(default_factory=ConfidenceSettings)
     publish: PublishSettings = Field(default_factory=PublishSettings)
+    history: HistorySettings = Field(default_factory=HistorySettings)
+    budgets: BudgetSettingsModel = Field(default_factory=BudgetSettingsModel)
+    audit: AuditSettings = Field(default_factory=AuditSettings)
+    feedback: FeedbackSettings = Field(default_factory=FeedbackSettings)
 
 
 def load_config(path: Path | None = None) -> TriageConfig:
@@ -148,6 +186,28 @@ def load_config(path: Path | None = None) -> TriageConfig:
         if isinstance(raw_publish, dict)
         else PublishSettings()
     )
+    raw_history = raw.get("history")
+    history = (
+        HistorySettings.model_validate(raw_history)
+        if isinstance(raw_history, dict)
+        else HistorySettings()
+    )
+    raw_budgets = raw.get("budgets")
+    budgets = (
+        BudgetSettingsModel.model_validate(raw_budgets)
+        if isinstance(raw_budgets, dict)
+        else BudgetSettingsModel()
+    )
+    raw_audit = raw.get("audit")
+    audit = (
+        AuditSettings.model_validate(raw_audit) if isinstance(raw_audit, dict) else AuditSettings()
+    )
+    raw_feedback = raw.get("feedback")
+    feedback = (
+        FeedbackSettings.model_validate(raw_feedback)
+        if isinstance(raw_feedback, dict)
+        else FeedbackSettings()
+    )
     return TriageConfig(
         repository=repository,
         artifacts=artifacts,
@@ -160,6 +220,24 @@ def load_config(path: Path | None = None) -> TriageConfig:
         verify=verify,
         confidence=confidence,
         publish=publish,
+        history=history,
+        budgets=budgets,
+        audit=audit,
+        feedback=feedback,
+    )
+
+
+def budget_settings_from_config(config: TriageConfig) -> BudgetSettings:
+    """Convert config budget fields into a BudgetGuard settings object."""
+    from triage.budget import BudgetSettings as Settings
+
+    raw = config.budgets
+    return Settings(
+        max_latency_ms=raw.max_latency_ms,
+        max_tokens=raw.max_tokens,
+        max_cost_usd=raw.max_cost_usd,
+        input_cost_per_1m=raw.input_cost_per_1m,
+        output_cost_per_1m=raw.output_cost_per_1m,
     )
 
 

@@ -153,8 +153,7 @@ class SubprocessTestRunner:
             raise ValueError(f"unsafe test path: {relative!r}")
         normalized = candidate_path.as_posix()
         if not any(
-            root == "." or normalized.startswith(root.rstrip("/") + "/")
-            for root in allowed_roots
+            root == "." or normalized.startswith(root.rstrip("/") + "/") for root in allowed_roots
         ):
             raise ValueError(f"test path is outside configured test roots: {relative!r}")
         target = (command.cwd / candidate_path).resolve()

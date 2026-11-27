@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from triage.budget import BudgetGuard
 from triage.classify.recording import Tracer
 from triage.llm.base import LLMClient
 from triage.llm.redact import redact_text, redact_value
@@ -22,12 +23,14 @@ class ToolLoopResult:
         tool_calls: int,
         capped: bool,
         error: str | None = None,
+        budget_exceeded: str | None = None,
     ) -> None:
         """Store submitted verdicts or the reason the loop stopped early."""
         self.verdicts = verdicts
         self.tool_calls = tool_calls
         self.capped = capped
         self.error = error
+        self.budget_exceeded = budget_exceeded
 
 
 def run_tool_loop(
@@ -37,8 +40,9 @@ def run_tool_loop(
     *,
     max_tool_calls: int,
     tracer: Tracer,
+    budget: BudgetGuard | None = None,
 ) -> ToolLoopResult:
-    """Call the model until submit_verdicts, the cap, or an error."""
+    """Call the model until submit_verdicts, the tool/cost budget, or an error."""
     tools = toolkit.specs()
     calls_used = 0
     history = list(messages)
@@ -66,6 +70,17 @@ def run_tool_loop(
                 "input": response.usage.input_tokens,
                 "output": response.usage.output_tokens,
             }
+
+        if budget is not None:
+            status = budget.sync_from_tracer(tracer)
+            if not status.ok:
+                return ToolLoopResult(
+                    verdicts=toolkit.submitted,
+                    tool_calls=calls_used,
+                    capped=False,
+                    budget_exceeded=status.exceeded,
+                    error=f"budget_exceeded:{status.exceeded}",
+                )
 
         assistant = response.message
         history.append(assistant)
@@ -95,6 +110,16 @@ def run_tool_loop(
                 )
             calls_used += 1
             result = _dispatch(toolkit, call, tracer)
+            if budget is not None:
+                status = budget.sync_from_tracer(tracer)
+                if not status.ok:
+                    return ToolLoopResult(
+                        verdicts=toolkit.submitted,
+                        tool_calls=calls_used,
+                        capped=False,
+                        budget_exceeded=status.exceeded,
+                        error=f"budget_exceeded:{status.exceeded}",
+                    )
             history.append(
                 ChatMessage(
                     role="tool",

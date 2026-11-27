@@ -9,6 +9,7 @@ from typing import Any
 from triage.llm.redact import redact_text, redact_value
 from triage.llm.types import ToolSpec
 from triage.schemas.bundle import EvidenceBundle, TestResult
+from triage.store.history import HistoryStore
 
 FAILED = frozenset({"failed", "timed_out", "interrupted"})
 TOOL_RESULT_CHARS = 12_000
@@ -27,11 +28,15 @@ class EvidenceToolkit:
         *,
         rule_summary: str = "",
         allowed_test_ids: set[str] | None = None,
+        history: HistoryStore | None = None,
+        quarantine_at: float = 0.3,
     ) -> None:
         """Remember the bundle and optional rules hint text."""
         self.bundle = bundle
         self.rule_summary = rule_summary
         self.allowed_test_ids = allowed_test_ids
+        self.history = history
+        self.quarantine_at = quarantine_at
         self._handlers: dict[str, Handler] = {
             "get_test_results": self._get_test_results,
             "get_diff": self._get_diff,
@@ -40,6 +45,7 @@ class EvidenceToolkit:
             "get_app_logs": self._get_app_logs,
             "read_test_detail": self._read_test_detail,
             "get_rule_signals": self._get_rule_signals,
+            "get_test_history": self._get_test_history,
             "submit_verdicts": self._submit_verdicts,
         }
         self.submitted: list[dict[str, Any]] | None = None
@@ -107,6 +113,20 @@ class EvidenceToolkit:
                 name="get_rule_signals",
                 description="Return deterministic rule-signal hints already computed.",
                 parameters={"type": "object", "properties": {}},
+            ),
+            ToolSpec(
+                name="get_test_history",
+                description=(
+                    "Return cross-run pass/fail history and flakiness for a test id. "
+                    "Flakiness is informational; never quarantine a test."
+                ),
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "test_id": {"type": "string", "description": "Exact test id."},
+                    },
+                    "required": ["test_id"],
+                },
             ),
             ToolSpec(
                 name="submit_verdicts",
@@ -316,6 +336,25 @@ class EvidenceToolkit:
     def _get_rule_signals(self, _arguments: dict[str, Any]) -> object:
         """Return the precomputed rules hint string."""
         return {"summary": self.rule_summary or "(none)"}
+
+    def _get_test_history(self, arguments: dict[str, Any]) -> object:
+        """Return cross-run history and flakiness; never quarantines a test."""
+        test_id = arguments.get("test_id")
+        if not isinstance(test_id, str):
+            return {"error": "test_id required"}
+        if not self._test_allowed(test_id):
+            return {"error": f"test is outside the classification scope: {test_id}"}
+        if self.history is None:
+            return {"test_id": test_id, "available": False, "note": "history store not configured"}
+        score = self.history.score_for_test(test_id, quarantine_at=self.quarantine_at)
+        outcomes = self.history.outcomes_for_test(test_id, limit=20)
+        return {
+            "test_id": test_id,
+            "available": True,
+            "flakiness": score.model_dump(),
+            "outcomes": [item.model_dump() for item in outcomes],
+            "note": "recommend quarantine only; the agent never quarantines a test",
+        }
 
     def _submit_verdicts(self, arguments: dict[str, Any]) -> object:
         """Accept the model's final verdicts and mark the loop complete."""

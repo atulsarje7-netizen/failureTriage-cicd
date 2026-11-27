@@ -72,9 +72,7 @@ def issue_writes_allowed() -> bool:
 def require_issue_write_allowed() -> None:
     """Refuse issue mutations outside the publish step."""
     if not _ALLOW_ISSUE_WRITES:
-        raise PermissionError(
-            "Creating or updating issues is refused outside the publish step"
-        )
+        raise PermissionError("Creating or updating issues is refused outside the publish step")
 
 
 class GitHubIssueClient:

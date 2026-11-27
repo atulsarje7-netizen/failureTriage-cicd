@@ -131,11 +131,21 @@ triage smoke --bundles bundles/smoke --engine llm --out bundles/smoke-llm
 ```bash
 triage run --bundle bundles/local-evidence_bundle.json --out bundles/verdicts.json
 triage run --bundle bundles/local-evidence_bundle.json --publish --dry-run --pull 123
+triage publish --drafts bundles/drafts.json --dry-run --pull 123
 ```
 
-`.github/workflows/triage.yml` runs when CI fails, collects the failed run, drafts bugs, posts a job summary / PR comment, and opens `triage:draft` issues.
+`.github/workflows/triage.yml` runs when CI fails: a collect/classify job (read-only `actions`) drafts bugs, then a publish job (issues / PR write only) posts the summary and opens `triage:draft` issues.
 
 Pre-test install, lint, and build failures are labelled by cause: unreachable registry or image pull is `environment_issue`; a change that broke the pin, lint, or Dockerfile is `build_break` (fix in the PR, no draft bug).
+
+## Hardening (Iteration 9)
+
+Cross-run history lives in SQLite (`.triage/history.db`). Flakiness is `min(passes, failures) / total runs`; drafts may recommend quarantine, but the agent never quarantines a test. Every classify/publish writes an audit JSONL line with evidence and versions. Cost and latency budgets in `triage.config.yaml` stop the LLM loop cleanly with `needs_human` when exceeded.
+
+```bash
+triage feedback --verdicts bundles/verdicts.json --cluster <id> --label product_bug --reviewer you
+triage feedback --verdicts bundles/verdicts.json --test-id tests/api/test_orders.py::test_checkout --label flaky_test --confirm
+```
 
 ## Run API tests
 

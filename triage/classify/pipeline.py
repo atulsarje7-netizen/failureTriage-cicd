@@ -51,6 +51,7 @@ def run_classify(
     *,
     engine: str = "rules",
     verify: bool | None = None,
+    history: object | None = None,
 ) -> tuple[VerdictReport, RunTrace]:
     """Classify with rules or LLM, then attach verification and confidence."""
     cfg = config or load_config()
@@ -60,7 +61,13 @@ def run_classify(
         from triage.llm.classify import run_llm
         from triage.llm.factory import build_llm_client
 
-        return run_llm(bundle, cfg, build_llm_client(cfg), verify=verify)
+        return run_llm(
+            bundle,
+            cfg,
+            build_llm_client(cfg),
+            verify=verify,
+            history=history,
+        )
     raise ValueError(f"unknown engine: {engine}")
 
 

@@ -46,6 +46,8 @@ class BugReportDraft(BaseModel):
     suspect_files: list[str] = Field(default_factory=list)
     reproduction: str | None = None
     suggested_fix: str | None = None
+    flakiness_score: float | None = None
+    quarantine_recommendation: str | None = None
     markdown: str = ""
     publishable: bool = True
     skip_reason: DraftSkipReason | None = None
