@@ -1,0 +1,68 @@
+# Config for the throwaway "inventory" second repo.
+# Layout differs from the demo shop on purpose: backend/ + e2e/, not app/ + tests/.
+
+ci:
+  provider: github_actions
+  repository: example/inventory-service
+
+paths:
+  product: [backend/]
+  product_ui: [frontend/]
+  test: [backend/tests/, e2e/]
+  config: [triage.config.yaml, docker-compose.yml]
+  infra: [.github/, Dockerfile]
+  dependency:
+    - pyproject.toml
+    - e2e/package.json
+    - e2e/package-lock.json
+
+artifacts:
+  api_junit: ci-results/api/junit.xml
+  api_exchanges: ci-results/api/exchanges
+  ui_report: ci-results/e2e/results.json
+  ui_results_dir: ci-results/e2e
+  app_log: logs/app.log
+  scenario_json: scenario/scenario.json
+  scenario_diff: scenario/scenario.diff
+
+flow_path_rules:
+  - pattern: backend/tests/test_auth.py
+    flow_id: login
+  - pattern: backend/tests/test_checkout.py
+    flow_id: checkout
+  - pattern: login.spec.ts
+    flow_id: login
+  - pattern: checkout.spec.ts
+    flow_id: checkout
+
+services:
+  app:
+    health_endpoint: /health
+
+thresholds:
+  abstain_below: 0.75
+  max_tool_calls: 12
+
+verify:
+  enabled: false
+
+publish:
+  pr_comment: true
+  draft_issue: true
+  draft_issue_label: triage:draft
+
+history:
+  enabled: true
+  path: .triage/history.db
+
+budgets:
+  max_latency_ms: 120000
+  max_tokens: 200000
+  max_cost_usd: 0.50
+
+audit:
+  enabled: true
+  path: .triage/audit.jsonl
+
+feedback:
+  path: .triage/feedback.jsonl

@@ -1,0 +1,6 @@
+{
+  "id": "inventory-checkout-500",
+  "label": "product_bug",
+  "flow_id": "checkout",
+  "note": "Second-repo proof case: API and UI fail after a backend orders change."
+}

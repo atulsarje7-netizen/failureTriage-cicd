@@ -29,7 +29,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[app,dev]"
 
       - name: Lint
         run: ruff check app triage faults tests/api
@@ -78,7 +78,7 @@ jobs:
         working-directory: .
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[app,dev]"
 
       - uses: actions/setup-node@v4
         with:

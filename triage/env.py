@@ -5,9 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from triage.config import ROOT
-
-DEFAULT_ENV_PATH = ROOT / ".env"
+DEFAULT_ENV_PATH = Path(".env")
 
 
 def load_dotenv(path: Path | None = None) -> Path | None:

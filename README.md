@@ -13,7 +13,7 @@ Local artifacts (`test-results/`, `playwright-report/`, `logs/*.log`, `app.db`, 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[app,dev]"
 ```
 
 UI tests also need Node:
@@ -146,6 +146,17 @@ Cross-run history lives in SQLite (`.triage/history.db`). Flakiness is `min(pass
 triage feedback --verdicts bundles/verdicts.json --cluster <id> --label product_bug --reviewer you
 triage feedback --verdicts bundles/verdicts.json --test-id tests/api/test_orders.py::test_checkout --label flaky_test --confirm
 ```
+
+## Reuse on another repo (Iteration 10)
+
+The agent installs without the demo shop:
+
+```bash
+python -m pip install "failure-triage @ git+https://github.com/atulsarje7-netizen/failureTriage-cicd.git@main"
+# or: docker build -f Dockerfile.triage -t failure-triage:0.10.0 .
+```
+
+Point another pipeline at it with `triage.config.yaml` plus the reusable workflow `.github/workflows/reusable-triage.yml`. Onboarding (required artifacts and config fields) is in [docs/onboarding.md](docs/onboarding.md). The throwaway second layout under [examples/second-repo](examples/second-repo) is triaged with config changes only; `tests/triage/test_reuse.py` is the automated proof.
 
 ## Run API tests
 

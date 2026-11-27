@@ -13,4 +13,6 @@ logs
 *.db
 plans
 .cursor
+bundles
+.triage
 faults/.active.json

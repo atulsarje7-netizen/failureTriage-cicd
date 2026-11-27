@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<testsuites name="pytest tests">
+  <testsuite name="pytest" errors="0" failures="1" skipped="0" tests="2" time="0.080" timestamp="2026-11-26T18:00:00" hostname="ci">
+    <testcase classname="backend.tests.test_auth" name="test_login_success" file="backend/tests/test_auth.py" time="0.030">
+      <properties>
+        <property name="flow_id" value="login"/>
+      </properties>
+    </testcase>
+    <testcase classname="backend.tests.test_checkout" name="test_place_order" file="backend/tests/test_checkout.py" time="0.040">
+      <properties>
+        <property name="flow_id" value="checkout"/>
+      </properties>
+      <failure message="assert 500 == 201&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">E   assert 500 == 201
+ +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+E   File "backend/tests/test_checkout.py", line 22, in test_place_order</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

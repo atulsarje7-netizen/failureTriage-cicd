@@ -11,8 +11,9 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from triage.budget import BudgetSettings
 
-ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CONFIG_PATH = ROOT / "triage.config.yaml"
+# Config is always repo-local: look next to the process cwd, never next to the
+# installed package (site-packages has no triage.config.yaml).
+DEFAULT_CONFIG_PATH = Path("triage.config.yaml")
 
 
 class ArtifactPaths(BaseModel):

@@ -1,0 +1,48 @@
+# Minimal starter config for a new repository.
+# Full field notes: docs/onboarding.md
+
+ci:
+  provider: github_actions
+  # repository: owner/repo
+
+paths:
+  product: [src/]
+  product_ui: [web/]
+  test: [tests/, e2e/]
+  config: [triage.config.yaml]
+  infra: [.github/, Dockerfile]
+  dependency: [pyproject.toml, package.json, package-lock.json]
+
+artifacts:
+  api_junit: test-results/api/junit.xml
+  api_exchanges: test-results/api/exchanges
+  ui_report: e2e/test-results/results.json
+  ui_results_dir: e2e/test-results
+  app_log: logs/app.log
+
+flow_path_rules: []
+
+thresholds:
+  abstain_below: 0.75
+  max_tool_calls: 12
+
+verify:
+  enabled: false
+
+publish:
+  pr_comment: true
+  draft_issue: true
+  draft_issue_label: triage:draft
+
+history:
+  enabled: true
+  path: .triage/history.db
+
+budgets:
+  max_latency_ms: 120000
+  max_tokens: 200000
+  max_cost_usd: 0.50
+
+audit:
+  enabled: true
+  path: .triage/audit.jsonl

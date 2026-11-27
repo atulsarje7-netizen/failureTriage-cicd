@@ -1,3 +1,3 @@
 """CI failure triage agent. Independent of the demo application."""
 
-__version__ = "0.9.0"
+__version__ = "0.10.0"

@@ -1,0 +1,28 @@
+# Drop-in caller for a second repository. No agent code lives here — only config.
+name: Triage
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  triage:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    uses: atulsarje7-netizen/failureTriage-cicd/.github/workflows/reusable-triage.yml@main
+    with:
+      run-id: ${{ github.event.workflow_run.id }}
+      repository: ${{ github.repository }}
+      config-path: triage.config.yaml
+      engine: rules
+      install-mode: git
+      triage-repository: atulsarje7-netizen/failureTriage-cicd
+      triage-ref: main
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}

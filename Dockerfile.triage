@@ -1,0 +1,16 @@
+# Standalone triage agent image (no demo shop).
+# Build: docker build -f Dockerfile.triage -t ghcr.io/<owner>/failure-triage:0.10.0 .
+# Run:   docker run --rm -v "$PWD:/work" -w /work -e GITHUB_TOKEN ghcr.io/<owner>/failure-triage:0.10.0 version
+
+FROM python:3.13-slim
+
+WORKDIR /opt/triage
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+
+COPY pyproject.toml README.md ./
+COPY triage ./triage
+RUN pip install --no-cache-dir .
+
+WORKDIR /work
+ENTRYPOINT ["triage"]
+CMD ["--help"]

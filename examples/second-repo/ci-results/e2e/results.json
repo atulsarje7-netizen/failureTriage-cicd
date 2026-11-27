@@ -1,0 +1,68 @@
+{
+  "config": {
+    "rootDir": "/work/e2e",
+    "version": "1.49.0"
+  },
+  "suites": [
+    {
+      "title": "e2e/checkout.spec.ts",
+      "file": "e2e/checkout.spec.ts",
+      "specs": [
+        {
+          "title": "place order is visible in history",
+          "ok": false,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 30000,
+              "annotations": [
+                { "type": "flow", "description": "checkout" }
+              ],
+              "expectedStatus": "passed",
+              "projectName": "chromium",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "status": "failed",
+                  "duration": 1200,
+                  "error": {
+                    "message": "Error: expect(received).toBeVisible()\n\nReceived: <element/> not found",
+                    "stack": "Error: expect(received).toBeVisible()\n    at /work/e2e/checkout.spec.ts:18:45"
+                  },
+                  "errors": [
+                    {
+                      "message": "Error: expect(received).toBeVisible()\n\nReceived: <element/> not found",
+                      "stack": "Error: expect(received).toBeVisible()\n    at /work/e2e/checkout.spec.ts:18:45"
+                    }
+                  ],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-11-26T18:00:01.000Z",
+                  "attachments": [],
+                  "steps": [
+                    {
+                      "title": "POST /orders → 500",
+                      "category": "http",
+                      "duration": 40
+                    }
+                  ]
+                }
+              ],
+              "status": "unexpected"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-26T18:00:00.000Z",
+    "duration": 1500,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

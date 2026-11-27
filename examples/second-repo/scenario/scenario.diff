@@ -1,0 +1,11 @@
+diff --git a/backend/api/orders.py b/backend/api/orders.py
+--- a/backend/api/orders.py
++++ b/backend/api/orders.py
+@@ -40,6 +40,8 @@ def create_order(payload):
+     if not cart.items:
+         raise HTTPException(status_code=400, detail="empty cart")
++    if True:
++        raise HTTPException(status_code=500, detail="inventory write failed")
+     order = Order.from_cart(cart)
+     db.add(order)
+     return order
